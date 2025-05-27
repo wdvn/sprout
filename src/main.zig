@@ -1,42 +1,64 @@
-const glfw = @import("glfw");
-const Allocator = std.mem.Allocator;
-
+const std = @import("std");
+const glfw = @import("glfw"); // Import thư viện GLFW
+const stdout = std.io.getStdOut().writer();
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
 
-    try glfw.initialize();
-    if(glfw.Window.create(@intCast(1000), @intCast(600), "title", null, null)) {
-        
-    } else {
-        return;
+    // 1. Khởi tạo GLFW
+    if (glfw.init() == glfw.FALSE) {
+        std.debug.print("Lỗi: Không thể khởi tạo GLFW\n", .{});
+        return error.GlfwInitFailed;
     }
-}
+    defer glfw.terminate(); // Đảm bảo glfw.terminate() được gọi khi hàm kết thúc
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
+    // 2. Cấu hình gợi ý GLFW (tùy chọn)
+    // Ví dụ: Đặt phiên bản OpenGL
+    glfw.windowHint(glfw.CONTEXT_VERSION_MAJOR, 3);
+    glfw.windowHint(glfw.CONTEXT_VERSION_MINOR, 3);
+    glfw.windowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE);
+    glfw.windowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE); // Cần thiết trên macOS
 
-test "use other module" {
-    try std.testing.expectEqual(@as(i32, 150), lib.add(100, 50));
-}
+    // Vô hiệu hóa khả năng thay đổi kích thước cửa sổ nếu bạn không muốn
+    // glfw.windowHint(glfw.RESIZABLE, glfw.FALSE);
 
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
+    // 3. Tạo cửa sổ
+    const width: i32 = 800;
+    const height: i32 = 600;
+    const title = "Cửa sổ GLFW đầu tiên của tôi trong Zig";
+
+    const window = glfw.createWindow(width, height, title, null, null);
+    if (window == null) {
+        std.debug.print("Lỗi: Không thể tạo cửa sổ GLFW\n", .{});
+        // Giải phóng tài nguyên GLFW đã được khởi tạo
+        glfw.terminate();
+        return error.GlfwCreateWindowFailed;
+    }
+    defer glfw.destroyWindow(window); // Đảm bảo cửa sổ được giải phóng
+
+    // 4. Tạo ngữ cảnh OpenGL (hoặc Vulkan)
+    glfw.makeContextCurrent(window);
+
+    // 5. Vòng lặp sự kiện (Render Loop)
+    std.debug.print("Cửa sổ đã được tạo thành công! Đang đợi sự kiện...\n", .{});
+
+    while (!glfw.windowShouldClose(window)) {
+        // Xử lý đầu vào (ví dụ: nhấn phím Esc để đóng cửa sổ)
+        if (glfw.getKey(window, glfw.KEY_ESCAPE) == glfw.PRESS) {
+            glfw.setWindowShouldClose(window, true);
         }
-    };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
+
+        // --- Mã vẽ của bạn ở đây ---
+        // Ví dụ: Xóa màn hình với màu xanh
+        glfw.clearColor(0.2, 0.3, 0.3, 1.0); // Màu xanh lam
+        glfw.clear(glfw.COLOR_BUFFER_BIT);
+
+        // Swap buffers (hiển thị hình ảnh đã vẽ lên màn hình)
+        glfw.swapBuffers(window);
+
+        // Xử lý các sự kiện (ví dụ: nhấp chuột, gõ phím)
+        glfw.waitEvents(); // Chờ sự kiện (tiết kiệm CPU)
+        // hoặc glfw.pollEvents(); // Xử lý sự kiện ngay lập tức (tiêu tốn CPU hơn nhưng phản hồi nhanh hơn)
+    }
+
+    std.debug.print("Cửa sổ đã đóng. Thoát ứng dụng.\n", .{});
 }
-
-const std = @import("std");
-
-/// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("sprout_lib");
