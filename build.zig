@@ -7,7 +7,7 @@ pub fn build(b: *Builder) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
-        .name = "glfw_example",
+        .name = "sprount",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
@@ -16,20 +16,6 @@ pub fn build(b: *Builder) void {
     // Liên kết với thư viện GLFW của hệ thống
     // Đảm bảo bạn đã cài đặt GLFW trên hệ thống của mình (ví dụ: `sudo apt install libglfw3-dev` trên Debian/Ubuntu)
     exe.linkSystemLibrary("glfw");
-
-    // Một số hệ thống có thể yêu cầu thêm các thư viện sau (cho X11):
-    if (target.result.os.tag == .linux) {
-        // exe.linkSystemLibrary("GL"); // Cho OpenGL
-        // exe.linkSystemLibrary("X11");
-        // exe.linkSystemLibrary("Xrandr");
-        // exe.linkSystemLibrary("Xinerama");
-        // exe.linkSystemLibrary("Xi"); // Cho Input
-        // exe.linkSystemLibrary("Xcursor");
-        // exe.linkSystemLibrary("rt"); // Cho clock_gettime
-        // exe.linkSystemLibrary("dl"); // Cho dlopen/dlsym
-        // exe.linkSystemLibrary("m"); // Cho toán học
-        // exe.linkSystemLibrary("pthread"); // Cho luồng
-    }
 
     b.installArtifact(exe);
 
@@ -42,10 +28,34 @@ pub fn build(b: *Builder) void {
     const run_step = b.step("run", "Run the application");
     run_step.dependOn(&run_cmd.step);
 
-    const glfw = b.dependency("glfw", .{}).module("glfw");
-    const root = exe.root_module;
     //import module
-    root.addImport("glfw", glfw);
+    manage_dependiencies(b, exe.root_module, target, optimize);
+}
+
+fn manage_dependiencies(b: *Builder, mod: *Builder.Module, target: Builder.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+    const glfw = b.dependency("glfw", .{}).module("glfw");
     const wgpu_native_dep = b.dependency("wgpu_native_zig", .{});
-    root.addImport("wgpu", wgpu_native_dep.module("wgpu"));
+
+    mod.addImport("glfw", glfw);
+    mod.addImport("wgpu", wgpu_native_dep.module("wgpu"));
+
+    switch (target.result.os.tag) {
+        .linux => {
+        // exe.linkSystemLibrary("GL"); // Cho OpenGL
+        // exe.linkSystemLibrary("X11");
+        // exe.linkSystemLibrary("Xrandr");
+        // exe.linkSystemLibrary("Xinerama");
+        // exe.linkSystemLibrary("Xi"); // Cho Input
+        // exe.linkSystemLibrary("Xcursor");
+        // exe.linkSystemLibrary("rt"); // Cho clock_gettime
+        // exe.linkSystemLibrary("dl"); // Cho dlopen/dlsym
+        // exe.linkSystemLibrary("m"); // Cho toán học
+        // exe.linkSystemLibrary("pthread"); // Cho luồng
+        },
+        .windows => {},
+        else => {},
+    }
+    if (optimize == std.builtin.OptimizeMode.Debug) {
+        std.debug.print("Not define optimize", .{});
+    }
 }
