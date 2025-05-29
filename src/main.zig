@@ -1,64 +1,164 @@
 const std = @import("std");
-const glfw = @import("glfw"); // Import thư viện GLFW
-const stdout = std.io.getStdOut().writer();
+const wgpu = @import("wgpu");
+const bmp = @import("./bmp.zig");
+
+const output_extent = wgpu.Extent3D {
+    .width = 640,
+    .height = 480,
+    .depth_or_array_layers = 1,
+};
+const output_bytes_per_row = 4 * output_extent.width;
+const output_size = output_bytes_per_row * output_extent.height;
+
+fn handle_buffer_map(status: wgpu.BufferMapAsyncStatus, _: ?*anyopaque) callconv(.C) void {
+    std.log.info("buffer_map status={x:.8}\n", .{@intFromEnum(status)});
+}
+
+// Based off of headless triangle example from https://github.com/eliemichel/LearnWebGPU-Code/tree/step030-headless
 
 pub fn main() !void {
+    const instance = wgpu.Instance.create(null).?;
+    defer instance.release();
 
-    // 1. Khởi tạo GLFW
-    if (glfw.init() == glfw.FALSE) {
-        std.debug.print("Lỗi: Không thể khởi tạo GLFW\n", .{});
-        return error.GlfwInitFailed;
+    const adapter_request = instance.requestAdapterSync(&wgpu.RequestAdapterOptions {});
+    const adapter = switch(adapter_request.status) {
+        .success => adapter_request.adapter.?,
+        else => return error.NoAdapter,
+    };
+    defer adapter.release();
+
+    const device_request = adapter.requestDeviceSync(&wgpu.DeviceDescriptor {
+        .required_limits = null,
+    });
+    const device = switch(device_request.status) {
+        .success => device_request.device.?,
+        else => return error.NoDevice,
+    };
+    defer device.release();
+
+    const queue = device.getQueue().?;
+    defer queue.release();
+
+    const swap_chain_format = wgpu.TextureFormat.bgra8_unorm_srgb;
+
+    const target_texture = device.createTexture(&wgpu.TextureDescriptor {
+        .label = "Render texture",
+        .size = output_extent,
+        .format = swap_chain_format,
+        .usage = wgpu.TextureUsage.render_attachment | wgpu.TextureUsage.copy_src,
+    }).?;
+    defer target_texture.release();
+
+    const target_texture_view = target_texture.createView(&wgpu.TextureViewDescriptor {
+        .label = "Render texture view",
+        .mip_level_count = 1,
+        .array_layer_count = 1,
+    }).?;
+
+    const shader_module = device.createShaderModule(&wgpu.shaderModuleWGSLDescriptor(.{
+        .code = @embedFile("./shader.wgsl"),
+    })).?;
+    defer shader_module.release();
+
+    const staging_buffer = device.createBuffer(&wgpu.BufferDescriptor {
+        .label = "staging_buffer",
+        .usage = wgpu.BufferUsage.map_read | wgpu.BufferUsage.copy_dst,
+        .size = output_size,
+        .mapped_at_creation = @as(u32, @intFromBool(false)),
+    }).?;
+    defer staging_buffer.release();
+
+    const color_targets = &[_] wgpu.ColorTargetState{
+        wgpu.ColorTargetState {
+            .format = swap_chain_format,
+            .blend = &wgpu.BlendState {
+                .color = wgpu.BlendComponent {
+                    .operation = .add,
+                    .src_factor = .src_alpha,
+                    .dst_factor = .one_minus_src_alpha,
+                },
+                .alpha = wgpu.BlendComponent {
+                    .operation = .add,
+                    .src_factor = .zero,
+                    .dst_factor = .one,
+                },
+            },
+        },
+    };
+
+    const pipeline = device.createRenderPipeline(&wgpu.RenderPipelineDescriptor {
+        .vertex = wgpu.VertexState {
+            .module = shader_module,
+            .entry_point = "vs_main",
+        },
+        .primitive = wgpu.PrimitiveState {},
+        .fragment = &wgpu.FragmentState {
+            .module = shader_module,
+            .entry_point = "fs_main",
+            .target_count = color_targets.len,
+            .targets = color_targets.ptr
+        },
+        .multisample = wgpu.MultisampleState {},
+    }).?;
+    defer pipeline.release();
+
+    { // Mock main "loop"
+        const next_texture = target_texture_view;
+
+        const encoder = device.createCommandEncoder(&wgpu.CommandEncoderDescriptor {
+            .label = "Command Encoder",
+        }).?;
+        defer encoder.release();
+
+        const color_attachments = &[_]wgpu.ColorAttachment{
+            wgpu.ColorAttachment {
+                .view = next_texture,
+                .clear_value = wgpu.Color {},
+            }
+        };
+        const render_pass = encoder.beginRenderPass(&wgpu.RenderPassDescriptor {
+            .color_attachment_count = color_attachments.len,
+            .color_attachments = color_attachments.ptr,
+        }).?;
+
+        render_pass.setPipeline(pipeline);
+        render_pass.draw(3, 1, 0, 0);
+        render_pass.end();
+
+        // The render pass has to be released after .end() or otherwise we'll crash on queue.submit
+        // https://github.com/gfx-rs/wgpu-native/issues/412#issuecomment-2311719154
+        render_pass.release();
+
+        defer next_texture.release();
+
+        const img_copy_src = wgpu.ImageCopyTexture {
+            .origin = wgpu.Origin3D {},
+            .texture = target_texture,
+        };
+        const img_copy_dst = wgpu.ImageCopyBuffer {
+            .layout = wgpu.TextureDataLayout {
+                .bytes_per_row = output_bytes_per_row,
+                .rows_per_image = output_extent.height,
+            },
+            .buffer = staging_buffer,
+        };
+
+        encoder.copyTextureToBuffer(&img_copy_src, &img_copy_dst, &output_extent);
+
+        const command_buffer = encoder.finish(&wgpu.CommandBufferDescriptor {
+            .label = "Command Buffer",
+        }).?;
+        defer command_buffer.release();
+
+        queue.submit(&[_]*const wgpu.CommandBuffer{command_buffer});
+
+        staging_buffer.mapAsync(wgpu.MapMode.read, 0, output_size, handle_buffer_map, null);
+        _ = device.poll(true, null);
+
+        const buf: [*]u8 = @ptrCast(@alignCast(staging_buffer.getMappedRange(0, output_size).?));
+        defer staging_buffer.unmap();
+
+        const output = buf[0..output_size].*;
+        try bmp.write24BitBMP("./triangle.bmp", output_extent.width, output_extent.height, output);
     }
-    defer glfw.terminate(); // Đảm bảo glfw.terminate() được gọi khi hàm kết thúc
-
-    // 2. Cấu hình gợi ý GLFW (tùy chọn)
-    // Ví dụ: Đặt phiên bản OpenGL
-    glfw.windowHint(glfw.CONTEXT_VERSION_MAJOR, 3);
-    glfw.windowHint(glfw.CONTEXT_VERSION_MINOR, 3);
-    glfw.windowHint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE);
-    glfw.windowHint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE); // Cần thiết trên macOS
-
-    // Vô hiệu hóa khả năng thay đổi kích thước cửa sổ nếu bạn không muốn
-    // glfw.windowHint(glfw.RESIZABLE, glfw.FALSE);
-
-    // 3. Tạo cửa sổ
-    const width: i32 = 800;
-    const height: i32 = 600;
-    const title = "Cửa sổ GLFW đầu tiên của tôi trong Zig";
-
-    const window = glfw.createWindow(width, height, title, null, null);
-    if (window == null) {
-        std.debug.print("Lỗi: Không thể tạo cửa sổ GLFW\n", .{});
-        // Giải phóng tài nguyên GLFW đã được khởi tạo
-        glfw.terminate();
-        return error.GlfwCreateWindowFailed;
-    }
-    defer glfw.destroyWindow(window); // Đảm bảo cửa sổ được giải phóng
-
-    // 4. Tạo ngữ cảnh OpenGL (hoặc Vulkan)
-    glfw.makeContextCurrent(window);
-
-    // 5. Vòng lặp sự kiện (Render Loop)
-    std.debug.print("Cửa sổ đã được tạo thành công! Đang đợi sự kiện...\n", .{});
-
-    while (!glfw.windowShouldClose(window)) {
-        // Xử lý đầu vào (ví dụ: nhấn phím Esc để đóng cửa sổ)
-        if (glfw.getKey(window, glfw.KEY_ESCAPE) == glfw.PRESS) {
-            glfw.setWindowShouldClose(window, true);
-        }
-
-        // --- Mã vẽ của bạn ở đây ---
-        // Ví dụ: Xóa màn hình với màu xanh
-        glfw.clearColor(0.2, 0.3, 0.3, 1.0); // Màu xanh lam
-        glfw.clear(glfw.COLOR_BUFFER_BIT);
-
-        // Swap buffers (hiển thị hình ảnh đã vẽ lên màn hình)
-        glfw.swapBuffers(window);
-
-        // Xử lý các sự kiện (ví dụ: nhấp chuột, gõ phím)
-        glfw.waitEvents(); // Chờ sự kiện (tiết kiệm CPU)
-        // hoặc glfw.pollEvents(); // Xử lý sự kiện ngay lập tức (tiêu tốn CPU hơn nhưng phản hồi nhanh hơn)
-    }
-
-    std.debug.print("Cửa sổ đã đóng. Thoát ứng dụng.\n", .{});
 }

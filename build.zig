@@ -31,7 +31,6 @@ pub fn build(b: *Builder) void {
         // exe.linkSystemLibrary("pthread"); // Cho luồng
     }
 
-
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
@@ -45,5 +44,8 @@ pub fn build(b: *Builder) void {
 
     const glfw = b.dependency("glfw", .{}).module("glfw");
     const root = exe.root_module;
+    //import module
     root.addImport("glfw", glfw);
+    const wgpu_native_dep = b.dependency("wgpu_native_zig", .{});
+    root.addImport("wgpu", wgpu_native_dep.module("wgpu"));
 }

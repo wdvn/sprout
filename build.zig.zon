@@ -40,10 +40,10 @@
             .url = "https://codeberg.org/Silverclaw/zig-glfw/archive/develop.zip",
             .hash = "glfw-1.0.1-P2aihVKAAADhLy79PJFmUbfqW4TUH2S3okWYlbBNEoEr",
         },
-        .wgpu_linux = .{
-            .url = "https://github.com/gfx-rs/wgpu-native/releases/download/v24.0.3.1/wgpu-linux-x86_64-debug.zip",
-            .hash = "N-V-__8AAN5gQhK2hkh1OV-9XC6oj4yjZupjtck_rbnl0UMc",
-            .lazy = true
+        .wgpu_linux = .{ .url = "https://github.com/gfx-rs/wgpu-native/releases/download/v24.0.3.1/wgpu-linux-x86_64-debug.zip", .hash = "N-V-__8AAN5gQhK2hkh1OV-9XC6oj4yjZupjtck_rbnl0UMc", .lazy = true },
+        .wgpu_native_zig = .{
+            .url = "https://github.com/bronter/wgpu_native_zig/archive/refs/tags/v5.1.0.tar.gz",
+            .hash = "wgpu_native_zig-5.1.0-B9jeDPmZAgAqCtg1bpt30WiO4lATvvQ9xKGTwfT2mzb0",
         },
     },
     .paths = .{
