@@ -45,6 +45,10 @@
             .url = "https://github.com/bronter/wgpu_native_zig/archive/refs/tags/v5.1.0.tar.gz",
             .hash = "wgpu_native_zig-5.1.0-B9jeDPmZAgAqCtg1bpt30WiO4lATvvQ9xKGTwfT2mzb0",
         },
+        .zglfw = .{
+            .url = "https://github.com/IridescenceTech/zglfw/archive/refs/heads/master.zip",
+            .hash = "zglfw-0.1.0-BghZXfnRAACSrPga22je1XilEj1QNXrtv6w4HIUFqdks",
+        },
     },
     .paths = .{
         "build.zig",

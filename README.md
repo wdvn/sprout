@@ -1,2 +1,4 @@
-# bgfx
-binding bgfx for jule
+# setup
+```shell
+sudo apt-get install -y libglfw3 libglfw3-dev
+```

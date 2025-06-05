@@ -1,6 +1,7 @@
 const std = @import("std");
 const wgpu = @import("wgpu");
 const bmp = @import("./bmp.zig");
+const glfw = @import("glfw");
 
 const output_extent = wgpu.Extent3D {
     .width = 640,
@@ -16,7 +17,7 @@ fn handle_buffer_map(status: wgpu.BufferMapAsyncStatus, _: ?*anyopaque) callconv
 
 // Based off of headless triangle example from https://github.com/eliemichel/LearnWebGPU-Code/tree/step030-headless
 
-pub fn main() !void {
+pub fn main_wgpu() !void {
     const instance = wgpu.Instance.create(null).?;
     defer instance.release();
 
@@ -160,5 +161,35 @@ pub fn main() !void {
 
         const output = buf[0..output_size].*;
         try bmp.write24BitBMP("./triangle.bmp", output_extent.width, output_extent.height, output);
+    }
+}
+
+pub fn main() !void {
+    // Initialize GLFW first
+    try glfw.init();
+    defer glfw.terminate(); // Ensure termination even if init fails
+
+    std.debug.print("GLFW Init Succeeded.\n", .{});
+
+    var major: i32 = 0;
+    var minor: i32 = 0;
+    var rev: i32 = 0;
+
+    // NOW you can safely call glfw.getVersion()
+    glfw.getVersion(&major, &minor, &rev);
+    std.debug.print("GLFW {}.{}.{}\n", .{ major, minor, rev });
+
+    // This would now work correctly if uncommented
+    // var monitor: ?*glfw.Monitor = glfw.getPrimaryMonitor();
+
+    const winx: *glfw.Window = try glfw.createWindow(800, 640, "Hello World", null, null);
+    defer glfw.destroyWindow(winx); // This defer will only run if createWindow succeeds
+
+    while (!glfw.windowShouldClose(winx)) {
+        if (glfw.getKey(winx, glfw.KeyEscape) == glfw.Press) {
+            glfw.setWindowShouldClose(winx, true);
+        }
+
+        glfw.pollEvents();
     }
 }

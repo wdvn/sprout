@@ -33,7 +33,7 @@ pub fn build(b: *Builder) void {
 }
 
 fn manage_dependiencies(b: *Builder, mod: *Builder.Module, target: Builder.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
-    const glfw = b.dependency("glfw", .{}).module("glfw");
+    const glfw = b.dependency("zglfw", .{}).module("glfw");
     const wgpu_native_dep = b.dependency("wgpu_native_zig", .{});
 
     mod.addImport("glfw", glfw);
