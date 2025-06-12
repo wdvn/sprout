@@ -1,9 +1,11 @@
 const std = @import("std");
-const wgpu = @import("wgpu");
-const bmp = @import("./bmp.zig");
-const glfw = @import("glfw");
 
-const output_extent = wgpu.Extent3D {
+const glfw = @import("glfw");
+const wgpu = @import("wgpu");
+
+const bmp = @import("./bmp.zig");
+const app = @import("./app/application.zig");
+const output_extent = wgpu.Extent3D{
     .width = 640,
     .height = 480,
     .depth_or_array_layers = 1,
@@ -21,17 +23,17 @@ pub fn main_wgpu() !void {
     const instance = wgpu.Instance.create(null).?;
     defer instance.release();
 
-    const adapter_request = instance.requestAdapterSync(&wgpu.RequestAdapterOptions {});
-    const adapter = switch(adapter_request.status) {
+    const adapter_request = instance.requestAdapterSync(&wgpu.RequestAdapterOptions{});
+    const adapter = switch (adapter_request.status) {
         .success => adapter_request.adapter.?,
         else => return error.NoAdapter,
     };
     defer adapter.release();
 
-    const device_request = adapter.requestDeviceSync(&wgpu.DeviceDescriptor {
+    const device_request = adapter.requestDeviceSync(&wgpu.DeviceDescriptor{
         .required_limits = null,
     });
-    const device = switch(device_request.status) {
+    const device = switch (device_request.status) {
         .success => device_request.device.?,
         else => return error.NoDevice,
     };
@@ -42,7 +44,7 @@ pub fn main_wgpu() !void {
 
     const swap_chain_format = wgpu.TextureFormat.bgra8_unorm_srgb;
 
-    const target_texture = device.createTexture(&wgpu.TextureDescriptor {
+    const target_texture = device.createTexture(&wgpu.TextureDescriptor{
         .label = "Render texture",
         .size = output_extent,
         .format = swap_chain_format,
@@ -50,7 +52,7 @@ pub fn main_wgpu() !void {
     }).?;
     defer target_texture.release();
 
-    const target_texture_view = target_texture.createView(&wgpu.TextureViewDescriptor {
+    const target_texture_view = target_texture.createView(&wgpu.TextureViewDescriptor{
         .label = "Render texture view",
         .mip_level_count = 1,
         .array_layer_count = 1,
@@ -61,7 +63,7 @@ pub fn main_wgpu() !void {
     })).?;
     defer shader_module.release();
 
-    const staging_buffer = device.createBuffer(&wgpu.BufferDescriptor {
+    const staging_buffer = device.createBuffer(&wgpu.BufferDescriptor{
         .label = "staging_buffer",
         .usage = wgpu.BufferUsage.map_read | wgpu.BufferUsage.copy_dst,
         .size = output_size,
@@ -69,16 +71,16 @@ pub fn main_wgpu() !void {
     }).?;
     defer staging_buffer.release();
 
-    const color_targets = &[_] wgpu.ColorTargetState{
-        wgpu.ColorTargetState {
+    const color_targets = &[_]wgpu.ColorTargetState{
+        wgpu.ColorTargetState{
             .format = swap_chain_format,
-            .blend = &wgpu.BlendState {
-                .color = wgpu.BlendComponent {
+            .blend = &wgpu.BlendState{
+                .color = wgpu.BlendComponent{
                     .operation = .add,
                     .src_factor = .src_alpha,
                     .dst_factor = .one_minus_src_alpha,
                 },
-                .alpha = wgpu.BlendComponent {
+                .alpha = wgpu.BlendComponent{
                     .operation = .add,
                     .src_factor = .zero,
                     .dst_factor = .one,
@@ -87,37 +89,30 @@ pub fn main_wgpu() !void {
         },
     };
 
-    const pipeline = device.createRenderPipeline(&wgpu.RenderPipelineDescriptor {
-        .vertex = wgpu.VertexState {
+    const pipeline = device.createRenderPipeline(&wgpu.RenderPipelineDescriptor{
+        .vertex = wgpu.VertexState{
             .module = shader_module,
             .entry_point = "vs_main",
         },
-        .primitive = wgpu.PrimitiveState {},
-        .fragment = &wgpu.FragmentState {
-            .module = shader_module,
-            .entry_point = "fs_main",
-            .target_count = color_targets.len,
-            .targets = color_targets.ptr
-        },
-        .multisample = wgpu.MultisampleState {},
+        .primitive = wgpu.PrimitiveState{},
+        .fragment = &wgpu.FragmentState{ .module = shader_module, .entry_point = "fs_main", .target_count = color_targets.len, .targets = color_targets.ptr },
+        .multisample = wgpu.MultisampleState{},
     }).?;
     defer pipeline.release();
 
     { // Mock main "loop"
         const next_texture = target_texture_view;
 
-        const encoder = device.createCommandEncoder(&wgpu.CommandEncoderDescriptor {
+        const encoder = device.createCommandEncoder(&wgpu.CommandEncoderDescriptor{
             .label = "Command Encoder",
         }).?;
         defer encoder.release();
 
-        const color_attachments = &[_]wgpu.ColorAttachment{
-            wgpu.ColorAttachment {
-                .view = next_texture,
-                .clear_value = wgpu.Color {},
-            }
-        };
-        const render_pass = encoder.beginRenderPass(&wgpu.RenderPassDescriptor {
+        const color_attachments = &[_]wgpu.ColorAttachment{wgpu.ColorAttachment{
+            .view = next_texture,
+            .clear_value = wgpu.Color{},
+        }};
+        const render_pass = encoder.beginRenderPass(&wgpu.RenderPassDescriptor{
             .color_attachment_count = color_attachments.len,
             .color_attachments = color_attachments.ptr,
         }).?;
@@ -132,12 +127,12 @@ pub fn main_wgpu() !void {
 
         defer next_texture.release();
 
-        const img_copy_src = wgpu.ImageCopyTexture {
-            .origin = wgpu.Origin3D {},
+        const img_copy_src = wgpu.ImageCopyTexture{
+            .origin = wgpu.Origin3D{},
             .texture = target_texture,
         };
-        const img_copy_dst = wgpu.ImageCopyBuffer {
-            .layout = wgpu.TextureDataLayout {
+        const img_copy_dst = wgpu.ImageCopyBuffer{
+            .layout = wgpu.TextureDataLayout{
                 .bytes_per_row = output_bytes_per_row,
                 .rows_per_image = output_extent.height,
             },
@@ -146,7 +141,7 @@ pub fn main_wgpu() !void {
 
         encoder.copyTextureToBuffer(&img_copy_src, &img_copy_dst, &output_extent);
 
-        const command_buffer = encoder.finish(&wgpu.CommandBufferDescriptor {
+        const command_buffer = encoder.finish(&wgpu.CommandBufferDescriptor{
             .label = "Command Buffer",
         }).?;
         defer command_buffer.release();
@@ -166,30 +161,38 @@ pub fn main_wgpu() !void {
 
 pub fn main() !void {
     // Initialize GLFW first
-    try glfw.init();
-    defer glfw.terminate(); // Ensure termination even if init fails
-
-    std.debug.print("GLFW Init Succeeded.\n", .{});
-
-    var major: i32 = 0;
-    var minor: i32 = 0;
-    var rev: i32 = 0;
-
-    // NOW you can safely call glfw.getVersion()
-    glfw.getVersion(&major, &minor, &rev);
-    std.debug.print("GLFW {}.{}.{}\n", .{ major, minor, rev });
-
-    // This would now work correctly if uncommented
-    // var monitor: ?*glfw.Monitor = glfw.getPrimaryMonitor();
-
-    const winx: *glfw.Window = try glfw.createWindow(800, 640, "Hello World", null, null);
-    defer glfw.destroyWindow(winx); // This defer will only run if createWindow succeeds
-
-    while (!glfw.windowShouldClose(winx)) {
-        if (glfw.getKey(winx, glfw.KeyEscape) == glfw.Press) {
-            glfw.setWindowShouldClose(winx, true);
-        }
-
-        glfw.pollEvents();
+    // try glfw.init();
+    // defer glfw.terminate(); // Ensure termination even if init fails
+    //
+    // std.debug.print("GLFW Init Succeeded.\n", .{});
+    //
+    // var major: i32 = 0;
+    // var minor: i32 = 0;
+    // var rev: i32 = 0;
+    //
+    // // NOW you can safely call glfw.getVersion()
+    // glfw.getVersion(&major, &minor, &rev);
+    // std.debug.print("GLFW {}.{}.{}\n", .{ major, minor, rev });
+    //
+    // // This would now work correctly if uncommented
+    // // var monitor: ?*glfw.Monitor = glfw.getPrimaryMonitor();
+    //
+    // const winx: *glfw.Window = try glfw.createWindow(800, 640, "Hello World", null, null);
+    // defer glfw.destroyWindow(winx); // This defer will only run if createWindow succeeds
+    // while (!glfw.windowShouldClose(winx)) {
+    //     if (glfw.getKey(winx, glfw.KeyEscape) == glfw.Press) {
+    //         glfw.setWindowShouldClose(winx, true);
+    //     }
+    //
+    //     glfw.pollEvents();
+    // }
+    //
+    const application = app.App.New();
+    if (!application.Initialize()) {
+        return;
+    }
+    defer application.Terminate();
+    while (application.IsRunning()) {
+        application.MainLoop();
     }
 }
