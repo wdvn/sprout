@@ -1,6 +1,37 @@
 cpp use "main.hpp"
-use "../fyzer/c"
+use "sprout/src/c"
 
+fn RGFW_BIT(x:u32):u32{
+    ret 1<<x
+}
+
+
+//enum
+type RGFW_windowFlags = u32
+let RGFW_windowNoInitAPI: RGFW_windowFlags = RGFW_BIT(0)
+let RGFW_windowNoBorder: RGFW_windowFlags = RGFW_BIT(1)
+let RGFW_windowNoResize: RGFW_windowFlags = RGFW_BIT(2)
+let RGFW_windowAllowDND: RGFW_windowFlags = RGFW_BIT(3)
+let RGFW_windowHideMouse: RGFW_windowFlags = RGFW_BIT(4)
+let RGFW_windowFullscreen: RGFW_windowFlags = RGFW_BIT(5)
+let RGFW_windowTransparent: RGFW_windowFlags = RGFW_BIT(6)
+let RGFW_windowCenter: RGFW_windowFlags = RGFW_BIT(7)
+let RGFW_windowOpenglSoftware: RGFW_windowFlags = RGFW_BIT(8)
+let RGFW_windowCocoaCHDirToRes: RGFW_windowFlags = RGFW_BIT(9)
+let RGFW_windowScaleToMonitor: RGFW_windowFlags = RGFW_BIT(10)
+let RGFW_windowHide: RGFW_windowFlags = RGFW_BIT(11)
+let RGFW_windowMaximize: RGFW_windowFlags = RGFW_BIT(12)
+let RGFW_windowCenterCursor: RGFW_windowFlags = RGFW_BIT(13)
+let RGFW_windowFloating: RGFW_windowFlags = RGFW_BIT(14)
+let RGFW_windowFreeOnClose: RGFW_windowFlags = RGFW_BIT(15)
+let RGFW_windowFocusOnShow: RGFW_windowFlags = RGFW_BIT(16)
+let RGFW_windowMinimize: RGFW_windowFlags = RGFW_BIT(17)
+let RGFW_windowFocus: RGFW_windowFlags = RGFW_BIT(18)
+let RGFW_windowedFullscreen: RGFW_windowFlags = RGFW_BIT(1) | RGFW_BIT(12)
+
+//****************************************
+
+//****************TYPE********************
 #typedef
 cpp struct RGFW_rect{
     x: i32
@@ -10,21 +41,24 @@ cpp struct RGFW_rect{
 }
 
 #typedef
-
-
-#typedef
-cpp struct RGFW_window{
-    name: *c.Char
-    rect: *RGFW_rect
+cpp struct RGFW_Window{
+    name: *u8
+    rect: cpp.RGFW_rect
     flags: RGFW_windowFlags
 }
 
-cpp fn RGFW_createWindow(name: *c.Char,rect: cpp.RGFW_rect,flags: RGFW_windowFlags)
+cpp fn RGFW_createWindow(name: *u8,rect: cpp.RGFW_rect,flags: RGFW_windowFlags): *cpp.RGFW_Window
+fn RGFW_createWindow(name:str,x:i32,y:i32,w:i32,h:i32,flags:RGFW_windowFlags): *cpp.RGFW_Window{
+    let nameChar = unsafe{ c::StrToU8Ptr(name)}
+    ret cpp.RGFW_createWindow(nameChar, cpp.RGFW_rect{x,y,w,h}, flags)
+}
 
-cpp fn RGFW_window_shouldClose(win: *cpp.RGFW_Window)
+cpp fn RGFW_window_shouldClose(win: *cpp.RGFW_Window):bool
+fn RGFW_window_shouldClose(win: *cpp.RGFW_Window):bool{
+    ret unsafe {cpp.RGFW_window_shouldClose(win) }   
+} 
 
-cpp fn RGFW_window_nextEvent()
-
-cpp fn RGFW_window_close()
-
-cpp fn RGFW_window_close()
+cpp fn RGFW_window_close(win: *cpp.RGFW_Window)
+fn RGFW_window_close(win: *cpp.RGFW_Window){
+    unsafe {cpp.RGFW_window_close(win)}
+}
