@@ -1,0 +1,30 @@
+cpp use "main.hpp"
+use "../fyzer/c"
+
+#typedef
+cpp struct RGFW_rect{
+    x: i32
+    y: i32
+    w: i32
+    h: i32
+}
+
+#typedef
+
+
+#typedef
+cpp struct RGFW_window{
+    name: *c.Char
+    rect: *RGFW_rect
+    flags: RGFW_windowFlags
+}
+
+cpp fn RGFW_createWindow(name: *c.Char,rect: cpp.RGFW_rect,flags: RGFW_windowFlags)
+
+cpp fn RGFW_window_shouldClose(win: *cpp.RGFW_Window)
+
+cpp fn RGFW_window_nextEvent()
+
+cpp fn RGFW_window_close()
+
+cpp fn RGFW_window_close()

@@ -1,0 +1,23 @@
+#pass ""-I./lib/rgfw/include -L./lib/rgfw/build/lib -lRGFW -lX11"
+
+
+fn main() {
+    println("Let's start")
+    
+    #include "RGFW.h"
+    
+    int main() {
+        RGFW_window* window = RGFW_createWindow("Hello RGFW", 800, 600, 0, NULL);
+    
+        while (RGFW_window_shouldClose(window)) {
+            while (RGFW_window_nextEvent(window)) {
+                if (window->event.type == RGFW_quit) {
+                    RGFW_window_close(window);
+                }
+            }
+            RGFW_window_clear(window, 255, 255, 255);
+        }
+        RGFW_window_close(window);
+        return 0;
+    }
+}
