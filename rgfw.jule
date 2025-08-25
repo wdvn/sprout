@@ -41,24 +41,25 @@ cpp struct RGFW_rect{
 }
 
 #typedef
-cpp struct RGFW_Window{
+cpp struct RGFW_window{
     name: *u8
     rect: cpp.RGFW_rect
     flags: RGFW_windowFlags
 }
+type RGFW_Window = cpp.RGFW_window
 
-cpp fn RGFW_createWindow(name: *u8,rect: cpp.RGFW_rect,flags: RGFW_windowFlags): *cpp.RGFW_Window
-fn RGFW_createWindow(name:str,x:i32,y:i32,w:i32,h:i32,flags:RGFW_windowFlags): *cpp.RGFW_Window{
-    let nameChar = unsafe{ c::StrToU8Ptr(name)}
+cpp fn RGFW_createWindow(name: *c::Char,rect: cpp.RGFW_rect,flags: RGFW_windowFlags): *RGFW_Window
+fn RGFW_createWindow(name:str,x:i32,y:i32,w:i32,h:i32,flags:RGFW_windowFlags): *RGFW_Window{
+    let nameChar = unsafe{ c::StrToCharPtr(name)}
     ret cpp.RGFW_createWindow(nameChar, cpp.RGFW_rect{x,y,w,h}, flags)
 }
 
-cpp fn RGFW_window_shouldClose(win: *cpp.RGFW_Window):bool
-fn RGFW_window_shouldClose(win: *cpp.RGFW_Window):bool{
+cpp fn RGFW_window_shouldClose(win: *RGFW_Window):bool
+fn RGFW_window_shouldClose(win: *RGFW_Window):bool{
     ret unsafe {cpp.RGFW_window_shouldClose(win) }   
 } 
 
-cpp fn RGFW_window_close(win: *cpp.RGFW_Window)
-fn RGFW_window_close(win: *cpp.RGFW_Window){
+cpp fn RGFW_window_close(win: *RGFW_Window)
+fn RGFW_window_close(win: *RGFW_Window){
     unsafe {cpp.RGFW_window_close(win)}
 }

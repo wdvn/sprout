@@ -3,8 +3,8 @@ type Char = cpp.char
 cpp type Void: uintptr
 type Void = cpp.Void
 
-unsafe fn StrToCharPtr(s: str): *cpp.char {
-	ret (*cpp.char)(&s[0])
+unsafe fn StrToCharPtr(s: str): *Char {
+	ret (*Char)(&s[0])
 }
 
 fn StrToU8Ptr(s:str): *u8{
