@@ -1,4 +1,8 @@
-#pass "-I./lib/RGFW/include -L./lib/RGFW/lib -lRGFW -lX11 -v"
+#pass "-I./lib/RGFW/include"
+#pass "-L./lib/RGFW/lib"
+#pass "-lRGFW"
+#pass "-lX11"
+#pass "-v"
 
 fn main() {
     println("Let's start")
