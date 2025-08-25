@@ -1,8 +1,12 @@
 #pass "-I./lib/RGFW/include"
 #pass "-L./lib/RGFW/lib"
 #pass "-lRGFW"
+//TODO: compile with static lib
+//#pass "./lib/RGFW/lib/libRGFW.a"
 #pass "-lX11"
 #pass "-v"
+#pass "-L/usr/lib/x86_64-linux-gnu/libGL.so"
+#pass "-lGL"
 
 fn main() {
     println("Let's start")
