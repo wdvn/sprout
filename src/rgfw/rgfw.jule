@@ -1,4 +1,4 @@
-cpp use "main.hpp"
+cpp use "./rgfw.hpp"
 use "sprout/src/c"
 
 fn RGFW_BIT(x:u32):u32{
@@ -63,3 +63,4 @@ cpp fn RGFW_window_close(win: *RGFW_Window)
 fn RGFW_window_close(win: *RGFW_Window){
     unsafe {cpp.RGFW_window_close(win)}
 }
+

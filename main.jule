@@ -8,11 +8,14 @@
 #pass "-L/usr/lib/x86_64-linux-gnu/libGL.so"
 #pass "-lGL"
 
+use "sprout/src/rgfw"
+
+
 fn main() {
     println("Let's start")
-    let mut window = RGFW_createWindow("Hello RGFW",0,0,800,600, RGFW_windowNoResize);
-    for (RGFW_window_shouldClose(window)) {
+    let mut window = rgfw::RGFW_createWindow("Hello RGFW",0,0,800,600, rgfw::RGFW_windowNoResize);
+    for (rgfw::RGFW_window_shouldClose(window)) {
         //cpp.RGFW_window_clear(window, 255, 255, 255);
     }
-    RGFW_window_close(window);
+    rgfw::RGFW_window_close(window);
 }
