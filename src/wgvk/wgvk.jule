@@ -1,0 +1,64 @@
+cpp use "./wgvk.hpp"
+
+type WGPUFlags = u64
+type WGPUBool = u32
+type Bool32 =u32
+
+#typedef
+cpp struct WGPUTextureImp {}
+#typedef
+cpp struct WGPUTextureViewImp {}
+#typedef
+cpp struct WGPUBufferImp {}
+#typedef
+cpp struct WGPUBindGroupImp {}
+#typedef
+cpp struct WGPUBindGroupLayoutImp {}
+#typedef
+cpp struct WGPUPipelineLayoutImp {}
+#typedef
+cpp struct WGPUBufferImp {}
+#typedef
+cpp struct WGPUFutureImp {}
+#typedef
+cpp struct WGPURenderPassEncoderImp {}
+#typedef
+cpp struct WGPUComputePassEncoderImp {}
+#typedef
+cpp struct WGPURenderBundleImp {}
+#typedef
+cpp struct WGPURenderBundleEncoderImp {}
+#typedef
+cpp struct WGPUCommandEncoderImp {}
+#typedef
+cpp struct WGPUCommandBufferImp {}
+#typedef
+cpp struct WGPUTextureImp {}
+#typedef
+cpp struct WGPUTextureViewImp {}
+#typedef
+cpp struct WGPUQueueImp {}
+#typedef
+cpp struct WGPUQuerySetImp {}
+#typedef
+cpp struct WGPUInstanceImp {}
+#typedef
+cpp struct WGPUAdapterImp {}
+#typedef
+cpp struct WGPUDeviceImp {}
+#typedef
+cpp struct WGPUSurfaceImp {}
+#typedef
+cpp struct WGPUShaderModuleImp {}
+#typedef
+cpp struct WGPURenderPipelineImp {}
+#typedef
+cpp struct WGPUComputePipelineImp {}
+#typedef
+cpp struct WGPUTopLevelAccelerationStructureImp {}
+#typedef
+cpp struct WGPUBottomLevelAccelerationStructureImp {}
+#typedef
+cpp struct WGPURaytracingPipelineImp {}
+#typedef
+cpp struct WGPURaytracingPassEncoderImp {}

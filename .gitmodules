@@ -1,0 +1,3 @@
+[submodule "lib/wgvk"]
+	path = lib/wgvk
+	url = git@github.com:wdvn/WGVK.git
