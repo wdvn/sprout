@@ -1,0 +1,127 @@
+
+#typedef
+cpp struct WGPUInstanceDescriptor {}
+type WGPUInstanceDescriptor = cpp.WGPUInstanceDescriptor
+
+#typedef
+cpp struct WGPUInstance{}
+type WGPUInstance = cpp.WGPUInstance
+
+#typedef
+cpp struct WGPURequestAdapterOptions{}
+type WGPURequestAdapterOptions = cpp.WGPURequestAdapterOptions
+
+
+#typedef
+cpp struct WGPURequestAdapterCallbackInfo{}
+type WGPURequestAdapterCallbackInfo = cpp.WGPURequestAdapterCallbackInfo
+
+#typedef
+cpp struct WGPURequestDeviceCallbackInfo{}
+type WGPURequestDeviceCallbackInfo = cpp.WGPURequestDeviceCallbackInfo
+
+#typedef
+cpp struct WGPUAdapter{}
+type WGPUAdapter = cpp.WGPUAdapter
+
+#typedef
+cpp struct WGPUFuture{}
+type WGPUFuture = cpp.WGPUFuture
+
+#typedef
+cpp struct WGPUFutureWaitInfo{}
+type WGPUFutureWaitInfo = cpp.WGPUFutureWaitInfo
+
+#typedef
+cpp struct WGPUStringView{}
+type WGPUStringView = cpp.WGPUStringView
+
+#typedef
+cpp struct WGPUDeviceDescriptor{}
+type WGPUDeviceDescriptor = cpp.WGPUDeviceDescriptor
+
+#typedef
+cpp struct WGPUDevice{}
+type WGPUDevice = cpp.WGPUDevice
+
+#typedef
+cpp struct WGPUQueue{}
+type WGPUQueue = cpp.WGPUQueue
+
+#typedef
+cpp struct WGPUSurface{}
+type WGPUSurface = cpp.WGPUSurface{}
+
+#typdef
+cpp struct WGPUSurfaceCapabilities{}
+type WGPUSurfaceCapabilities = cpp.WGPUSurfaceCapabilities
+
+#typedef
+cpp struct WGPUPresentMode{}
+type WGPUPresentMode = cpp.WGPUPresentMode
+
+#typedef
+cpp struct WGPUShaderSourceSPIRV{}
+type WGPUShaderSourceSPIRV = cpp.WGPUShaderSourceSPIRV
+
+#typedef
+cpp struct WGPUShaderModuleDescriptor{}
+type WGPUShaderModuleDescriptor = cpp.WGPUShaderModuleDescriptor
+
+#typedef
+cpp struct WGPUShaderModule{}
+type WGPUShaderModule = cpp.WGPUShaderModule
+
+#typdef
+cpp struct WGPUVertexAttribute{}
+type WGPUVertexAttribute = cpp.WGPUVertexAttribute
+
+#typdef
+cpp struct WGPUVertexBufferLayout{}
+type WGPUVertexBufferLayout = cpp.WGPUVertexBufferLayout
+
+#typedef
+cpp struct WGPUBlendState{}
+type WGPUBlendState = cpp.WGPUBlendState
+
+#typdef
+cpp struct WGPUColorTargetState{}
+type WGPUColorTargetState= cpp.WGPUColorTargetState
+
+#typdef
+cpp struct WGPUFragmentState{}
+type WGPUFragmentState = cpp.WGPUFragmentState
+
+#typedef
+cpp struct WGPUPipelineLayoutDescriptor{}
+type WGPUPipelineLayoutDescriptor = cpp.WGPUPipelineLayoutDescriptor
+
+#typedef
+cpp struct WGPUPipelineLayout{}
+type WGPUPipelineLayout = cpp.WGPUPipelineLayout
+
+#typedef
+cpp struct WGPURenderPipelineDescriptor{}
+type WGPURenderPipelineDescriptor = cpp.WGPURenderPipelineDescriptor
+
+#typdef
+cpp struct WGPURenderPipeline{}
+type WGPURenderPipeline = cpp.WGPURenderPipeline
+
+#typdef
+cpp struct WGPUBufferDescriptor{}
+type WGPUBufferDescriptor = cpp.WGPUBufferDescriptor
+
+#typdef
+cpp struct WGPUBuffer{}
+type WGPUBuffer = cpp.WGPUBuffer
+
+
+#typdef
+cpp struct WGPURenderBundleEncoderDescriptor{}
+type WGPURenderBundleEncoderDescriptor = cpp.WGPURenderBundleEncoderDescriptor
+
+cpp fn wgpuCreateInstance(): WGPUInstance
+fn wgpuCreateInstance(): WGPUInstance{
+    ret unsafe {cpp.wgpuCreateInstance}
+}
