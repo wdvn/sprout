@@ -62,3 +62,4 @@ cpp struct WGPUBottomLevelAccelerationStructureImp {}
 cpp struct WGPURaytracingPipelineImp {}
 #typedef
 cpp struct WGPURaytracingPassEncoderImp {}
+

@@ -1,21 +1,26 @@
-#pass "-I./lib/RGFW/include"
-#pass "-L./lib/RGFW/lib"
-#pass "-lRGFW"
-//TODO: compile with static lib
-//#pass "./lib/RGFW/lib/libRGFW.a"
-#pass "-lX11"
-#pass "-v"
-#pass "-L/usr/lib/x86_64-linux-gnu/libGL.so"
-#pass "-lGL"
+//#pass "-I./lib/RGFW/include"
+//#pass "-L./lib/RGFW/lib"
+//#pass "-lRGFW"
+////TODO: compile with static lib
+////#pass "./lib/RGFW/lib/libRGFW.a"
+//#pass "-lX11"
+//#pass "-v"
+//#pass "-L/usr/lib/x86_64-linux-gnu/libGL.so"
+//#pass "-lGL"
+//
+//use "sprout/src/rgfw"
+//
+//
+//fn main() {
+//    println("Let's start")
+//    let mut window = rgfw::RGFW_createWindow("Hello RGFW",0,0,800,600, rgfw::RGFW_windowNoResize);
+//    for (rgfw::RGFW_window_shouldClose(window)) {
+//        //cpp.RGFW_window_clear(window, 255, 255, 255);
+//    }
+//    rgfw::RGFW_window_close(window);
+//}
 
-use "sprout/src/rgfw"
 
+fn main(){
 
-fn main() {
-    println("Let's start")
-    let mut window = rgfw::RGFW_createWindow("Hello RGFW",0,0,800,600, rgfw::RGFW_windowNoResize);
-    for (rgfw::RGFW_window_shouldClose(window)) {
-        //cpp.RGFW_window_clear(window, 255, 255, 255);
-    }
-    rgfw::RGFW_window_close(window);
 }

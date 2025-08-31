@@ -1,0 +1,6 @@
+enum WGPUInstanceFeatureName {
+    WGPUInstanceFeatureName_TimedWaitAny = 0x00000001
+    WGPUInstanceFeatureName_ShaderSourceSPIRV = 0x00000002
+    WGPUInstanceFeatureName_MultipleDevicesPerAdapter = 0x00000003
+    WGPUInstanceFeatureName_Force32 = 0x7FFFFFFF
+}
