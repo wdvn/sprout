@@ -1,4 +1,16 @@
 cpp type WGPUFlags: u64
+type WGPUFlags = cpp.WGPUFlags
+type WGPUTextureUsage = WGPUFlags
+
+const WGPUTextureUsage_None: WGPUTextureUsage = 0x0000000000000000
+const WGPUTextureUsage_CopySrc: WGPUTextureUsage = 0x0000000000000001
+const WGPUTextureUsage_CopyDst: WGPUTextureUsage = 0x0000000000000002
+const WGPUTextureUsage_TextureBinding: WGPUTextureUsage = 0x0000000000000004
+const WGPUTextureUsage_StorageBinding: WGPUTextureUsage = 0x0000000000000008
+const WGPUTextureUsage_RenderAttachment: WGPUTextureUsage = 0x0000000000000010
+const WGPUTextureUsage_TransientAttachment: WGPUTextureUsage = 0x0000000000001000
+const WGPUTextureUsage_StorageAttachment: WGPUTextureUsage = 0x0000000000002000
+
 cpp type WGPUBool: u32
 cpp type Bool32: u32
 
@@ -153,14 +165,57 @@ cpp struct WGPUColor{}
 type WGPUColor = cpp.WGPUColor
 
 #typedef
-cpp struct WGPUSurfaceTexture{}
+cpp struct WGPUTexture{}
+type WGPUTexture =cpp.WGPUTexture
+
+#typedef
+cpp struct WGPUSurfaceTexture {
+	nextInChain: &WGPUChainedStruct
+	texture:     WGPUTexture
+	status:      WGPUSurfaceGetCurrentTextureStatus
+}
 
 type WGPUSurfaceTexture = cpp.WGPUSurfaceTexture
 
 #typedef
-cpp struct WGPUSurfaceConfiguration{}
+cpp struct WGPUSurfaceConfiguration {
+	nextInChain:     *WGPUChainedStruct
+	device:          WGPUDevice
+	format:          WGPUTextureFormat
+	usage:           WGPUTextureUsage
+	width:           u32
+	height:          u32
+	viewFormatCount: u32
+	viewFormats:     &WGPUTextureFormat
+	alphaMode:       WGPUCompositeAlphaMode
+	presentMode:     WGPUPresentMode
+}
 
 type WGPUSurfaceConfiguration = cpp.WGPUSurfaceConfiguration
+
+#typedef
+cpp struct WGPUChainedStruct {
+	next:  &cpp.WGPUChainedStruct
+	sType: WGPUSType
+}
+
+type WGPUChainedStruct = cpp.WGPUChainedStruct
+
+#typedef
+cpp struct WGPUTextureViewDescriptor {
+	nextInChain:     &WGPUChainedStruct
+	label:           WGPUStringView
+	format:          WGPUTextureFormat
+	dimension:       WGPUTextureViewDimension
+	baseMipLevel:    u32
+	mipLevelCount:   u32
+	baseArrayLayer:  u32
+	arrayLayerCount: u32
+	aspect:          WGPUTextureAspect
+	usage:           WGPUTextureUsage
+}
+
+type WGPUTextureViewDescriptor = cpp.WGPUTextureViewDescriptor
 
 cpp fn wgpuCreateInstance(): WGPUInstance
 fn WgpuCreateInstance(): WGPUInstance {

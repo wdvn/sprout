@@ -33,10 +33,10 @@ fn mainLoop(mut data: &LoopContext) {
 
 	if (surfaceTexture.status != wgvk::WGPUSurfaceGetCurrentTextureStatus.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
 		let surfaceConfig = &wgvk::WGPUSurfaceConfiguration{
-			alphaMode: WGPUCompositeAlphaMode_Opaque,
-			presentMode: WGPUPresentMode_Fifo,
+			alphaMode: wgvk::WGPUCompositeAlphaMode.WGPUCompositeAlphaMode_Opaque,
+			presentMode: wgvk::WGPUPresentMode.WGPUPresentMode_Fifo,
 			device: context.device,
-			format: WGPUTextureFormat_BGRA8Unorm,
+			format: wgvk::WGPUTextureFormat.WGPUTextureFormat_BGRA8Unorm,
 			width: 1000,
 			height: 1000,
 		}
@@ -47,7 +47,7 @@ fn mainLoop(mut data: &LoopContext) {
 		arrayLayerCount: 1,
 		baseMipLevel: 0,
 		mipLevelCount: 1,
-		format: wgvk::WGPUTextureFormat_BGRA8Unorm,
+		format: wgvk::WGPUTextureFormat.WGPUTextureFormat_BGRA8Unorm,     
 		dimension: wgvk::WGPUTextureViewDimension_2D,
 		usage: wgvk::WGPUTextureUsage_RenderAttachment,
 		aspect: wgvk::WGPUTextureAspect_All,
@@ -80,8 +80,8 @@ fn mainLoop(mut data: &LoopContext) {
 
 fn main() {
 	let instanceFeatures :[2]wgvk::WGPUInstanceFeatureName= [
-		wgvk::WGPUInstanceFeatureName_TimedWaitAny,
-		wgvk::WGPUInstanceFeatureName_ShaderSourceSPIRV,
+		wgvk::WGPUInstanceFeatureName.WGPUInstanceFeatureName_TimedWaitAny,
+		wgvk::WGPUInstanceFeatureName.WGPUInstanceFeatureName_ShaderSourceSPIRV,
 	]
 	fmt::Println("start")
 }

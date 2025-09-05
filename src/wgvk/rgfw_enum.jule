@@ -27,7 +27,8 @@ let RGFW_windowFocus: RGFW_windowFlags = RGFW_BIT(18)
 let RGFW_windowedFullscreen: RGFW_windowFlags = RGFW_BIT(1) | RGFW_BIT(12)
 
 cpp type RGFW_eventType: u32
-type RGFW_eventType=cpp.RGFW_eventType
+type RGFW_eventType = cpp.RGFW_eventType
+
 let RGFW_eventNone: RGFW_eventType = 0
 let RGFW_keyPressed: RGFW_eventType = RGFW_eventNone + 1
 let RGFW_keyReleased: RGFW_eventType = RGFW_keyPressed + 1
@@ -49,7 +50,8 @@ let RGFW_windowMinimized: RGFW_eventType = RGFW_windowMaximized + 1
 let RGFW_windowRestored: RGFW_eventType = RGFW_windowMinimized + 1
 let RGFW_scaleUpdated: RGFW_eventType = RGFW_windowRestored + 1
 
-cpp type RGFW_bool:u8
+cpp type RGFW_bool: u8
 type RGFW_bool = cpp.RGFW_bool
-const RGFW_TRUE:  RGFW_bool=1
-const RGFW_FALSE: RGFW_bool=0
+
+const RGFW_TRUE: RGFW_bool = 1
+const RGFW_FALSE: RGFW_bool = 0

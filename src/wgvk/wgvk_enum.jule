@@ -169,16 +169,60 @@ enum WGPUTextureFormat {
 	WGPUTextureFormat_Force32: 0x7FFFFFFF,
 }
 
-cpp type RGFW_mouseButton: u8 
-type RGFW_mouseButton=cpp.RGFW_mouseButton
-let	RGFW_mouseLeft:RGFW_mouseButton=0    /*!< left mouse button is pressed */
-let	RGFW_mouseMiddle:RGFW_mouseButton=RGFW_mouseLeft+1     /*!< mouse-wheel-button is pressed */
-let	RGFW_mouseRight:RGFW_mouseButton=RGFW_mouseMiddle+1      /*!< right mouse button is pressed */
-let	RGFW_mouseScrollUp:RGFW_mouseButton=RGFW_mouseRight+1   /*!< mouse wheel is scrolling up */
-let	RGFW_mouseScrollDown:RGFW_mouseButton=RGFW_mouseScrollUp+1 /*!< mouse wheel is scrolling down */
-let	RGFW_mouseMisc1:RGFW_mouseButton=RGFW_mouseScrollDown+1
-let	RGFW_mouseMisc2:RGFW_mouseButton=RGFW_mouseMisc1+1
-let	RGFW_mouseMisc3:RGFW_mouseButton=RGFW_mouseMisc2+1
-let	RGFW_mouseMisc4:RGFW_mouseButton=RGFW_mouseMisc3+1
-let	RGFW_mouseMisc5:RGFW_mouseButton=RGFW_mouseMisc4+1
-let	RGFW_mouseFinal:RGFW_mouseButton=RGFW_mouseMisc5+1
+cpp type RGFW_mouseButton: u8
+type RGFW_mouseButton = cpp.RGFW_mouseButton
+
+let RGFW_mouseLeft: RGFW_mouseButton = 0                            /*!< left mouse button is pressed */
+let RGFW_mouseMiddle: RGFW_mouseButton = RGFW_mouseLeft + 1         /*!< mouse-wheel-button is pressed */
+let RGFW_mouseRight: RGFW_mouseButton = RGFW_mouseMiddle + 1        /*!< right mouse button is pressed */
+let RGFW_mouseScrollUp: RGFW_mouseButton = RGFW_mouseRight + 1      /*!< mouse wheel is scrolling up */
+let RGFW_mouseScrollDown: RGFW_mouseButton = RGFW_mouseScrollUp + 1 /*!< mouse wheel is scrolling down */
+let RGFW_mouseMisc1: RGFW_mouseButton = RGFW_mouseScrollDown + 1
+let RGFW_mouseMisc2: RGFW_mouseButton = RGFW_mouseMisc1 + 1
+let RGFW_mouseMisc3: RGFW_mouseButton = RGFW_mouseMisc2 + 1
+let RGFW_mouseMisc4: RGFW_mouseButton = RGFW_mouseMisc3 + 1
+let RGFW_mouseMisc5: RGFW_mouseButton = RGFW_mouseMisc4 + 1
+let RGFW_mouseFinal: RGFW_mouseButton = RGFW_mouseMisc5 + 1
+
+enum WGPUSType {
+	WGPUSType_ShaderSourceSPIRV: 0x00000001,
+	WGPUSType_ShaderSourceWGSL: 0x00000002,
+	WGPUSType_SurfaceSourceMetalLayer: 0x00000004,
+	WGPUSType_SurfaceSourceWindowsHWND: 0x00000005,
+	WGPUSType_SurfaceSourceXlibWindow: 0x00000006,
+	WGPUSType_SurfaceSourceWaylandSurface: 0x00000007,
+	WGPUSType_SurfaceSourceAndroidNativeWindow: 0x00000008,
+	WGPUSType_SurfaceSourceXCBWindow: 0x00000009,
+	WGPUSType_SurfaceColorManagement: 0x0000000A,
+	WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector: 0x00040000,
+
+	WGPUSType_TextureComponentSwizzleDescriptor: 0x00050047,
+	WGPUSType_InstanceLayerSelection: 0x10000001,
+	WGPUSType_BufferAllocatorSelector: 0x10000002,
+	WGPUSType_ShaderSourceGLSL: 0x10000003,
+	WGPUSType_PrimitiveLineWidthInfo: 0x10000004,
+	WGPUSType_SurfaceSourceDrmPlane: 0x10000005,
+	// non-standard sTypes
+}
+
+enum WGPUTextureAspect {
+    WGPUTextureAspect_Undefined   : 0x00000000,
+    WGPUTextureAspect_All         : 0x00000001,
+    WGPUTextureAspect_StencilOnly : 0x00000002,
+    WGPUTextureAspect_DepthOnly   : 0x00000003,
+    WGPUTextureAspect_Plane0Only  : 0x00050000,
+    WGPUTextureAspect_Plane1Only  : 0x00050001,
+    WGPUTextureAspect_Plane2Only  : 0x00050002,
+    WGPUTextureAspect_Force32     : 0x7FFFFFFF
+} 
+
+enum WGPUTextureViewDimension{
+    WGPUTextureViewDimension_Undefined : 0x00000000,
+    WGPUTextureViewDimension_1D : 0x00000001,
+    WGPUTextureViewDimension_2D : 0x00000002,
+    WGPUTextureViewDimension_2DArray : 0x00000003,
+    WGPUTextureViewDimension_Cube : 0x00000004,
+    WGPUTextureViewDimension_CubeArray : 0x00000005,
+    WGPUTextureViewDimension_3D : 0x00000006,
+    WGPUTextureViewDimension_Force32 : 0x7FFFFFFF
+}
