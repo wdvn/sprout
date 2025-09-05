@@ -1,24 +1,7 @@
-//#pass "-I./lib/RGFW/include"
-//#pass "-L./lib/RGFW/lib"
-//#pass "-lRGFW"
-////TODO: compile with static lib
-////#pass "./lib/RGFW/lib/libRGFW.a"
-//#pass "-lX11"
-//#pass "-v"
-//#pass "-L/usr/lib/x86_64-linux-gnu/libGL.so"
-//#pass "-lGL"
-//
-//use "sprout/src/rgfw"
-//
-//
-//fn main() {
-//    println("Let's start")
-//    let mut window = rgfw::RGFW_createWindow("Hello RGFW",0,0,800,600, rgfw::RGFW_windowNoResize);
-//    for (rgfw::RGFW_window_shouldClose(window)) {
-//        //cpp.RGFW_window_clear(window, 255, 255, 255);
-//    }
-//    rgfw::RGFW_window_close(window);
-//}
+
+#pass "-I./lib/wgvk/include/external"
+#pass "-I./lib/wgvk/include"
+#pass "-L./lib/wgvk/build/libwgvk.a"
 
 use "sprout/src/c"
 use "sprout/src/wgvk"
@@ -34,15 +17,15 @@ struct LoopContext {
 }
 
 // make loop render
-fn mainLoop(data: any) {
-	mut context := (*LoopContext)(data)
+fn mainLoop(mut data: &LoopContext) {
+	mut context := data
 	let mut event = wgvk::RGFW_event{}
-	for wgvk::RGFW_window_checkEvent(context.window, &event) {
+	for wgvk::RGFW_window_checkEvent(context.window, &event) == wgvk::RGFW_TRUE{
 		if event._type == wgvk::RGFW_quit {
 			break
 		}
 		if event._type == wgvk::RGFW_mouseButtonPressed && event.button == wgvk::RGFW_mouseLeft {
-			fmt::Printf("You clicked at x: %d, y: %d\n", event.point.x, event.point.y)
+			fmt::Println("You clicked at x: %d, y: %d\n", event.point.x, event.point.y)
 		}
 	}
 	mut surfaceTexture := wgvk::WGPUSurfaceTexture{}
@@ -96,8 +79,9 @@ fn mainLoop(data: any) {
 }
 
 fn main() {
-	instanceFeatures := {
+	let instanceFeatures :[2]wgvk::WGPUInstanceFeatureName= [
 		wgvk::WGPUInstanceFeatureName_TimedWaitAny,
 		wgvk::WGPUInstanceFeatureName_ShaderSourceSPIRV,
-	}
+	]
+	fmt::Println("start")
 }

@@ -1,144 +1,178 @@
+cpp type WGPUFlags: u64
+cpp type WGPUBool: u32
+cpp type Bool32: u32
 
 #typedef
-cpp struct WGPUInstanceDescriptor {}
+cpp struct WGPUInstanceDescriptor{}
+
 type WGPUInstanceDescriptor = cpp.WGPUInstanceDescriptor
 
 #typedef
 cpp struct WGPUInstance{}
+
 type WGPUInstance = cpp.WGPUInstance
 
 #typedef
 cpp struct WGPURequestAdapterOptions{}
-type WGPURequestAdapterOptions = cpp.WGPURequestAdapterOptions
 
+type WGPURequestAdapterOptions = cpp.WGPURequestAdapterOptions
 
 #typedef
 cpp struct WGPURequestAdapterCallbackInfo{}
+
 type WGPURequestAdapterCallbackInfo = cpp.WGPURequestAdapterCallbackInfo
 
 #typedef
 cpp struct WGPURequestDeviceCallbackInfo{}
+
 type WGPURequestDeviceCallbackInfo = cpp.WGPURequestDeviceCallbackInfo
 
 #typedef
 cpp struct WGPUAdapter{}
+
 type WGPUAdapter = cpp.WGPUAdapter
 
 #typedef
 cpp struct WGPUFuture{}
+
 type WGPUFuture = cpp.WGPUFuture
 
 #typedef
 cpp struct WGPUFutureWaitInfo{}
+
 type WGPUFutureWaitInfo = cpp.WGPUFutureWaitInfo
 
 #typedef
 cpp struct WGPUStringView{}
+
 type WGPUStringView = cpp.WGPUStringView
 
 #typedef
 cpp struct WGPUDeviceDescriptor{}
+
 type WGPUDeviceDescriptor = cpp.WGPUDeviceDescriptor
 
 #typedef
 cpp struct WGPUDevice{}
+
 type WGPUDevice = cpp.WGPUDevice
 
 #typedef
 cpp struct WGPUQueue{}
+
 type WGPUQueue = cpp.WGPUQueue
 
 #typedef
 cpp struct WGPUSurface{}
+
 type WGPUSurface = cpp.WGPUSurface
 
 #typedef
 cpp struct WGPUSurfaceCapabilities{}
+
 type WGPUSurfaceCapabilities = cpp.WGPUSurfaceCapabilities
 
 #typedef
 cpp struct WGPUShaderSourceSPIRV{}
+
 type WGPUShaderSourceSPIRV = cpp.WGPUShaderSourceSPIRV
 
 #typedef
 cpp struct WGPUShaderModuleDescriptor{}
+
 type WGPUShaderModuleDescriptor = cpp.WGPUShaderModuleDescriptor
 
 #typedef
 cpp struct WGPUShaderModule{}
+
 type WGPUShaderModule = cpp.WGPUShaderModule
 
 #typedef
 cpp struct WGPUVertexAttribute{}
+
 type WGPUVertexAttribute = cpp.WGPUVertexAttribute
 
 #typedef
 cpp struct WGPUVertexBufferLayout{}
+
 type WGPUVertexBufferLayout = cpp.WGPUVertexBufferLayout
 
 #typedef
 cpp struct WGPUBlendState{}
+
 type WGPUBlendState = cpp.WGPUBlendState
 
 #typedef
 cpp struct WGPUColorTargetState{}
-type WGPUColorTargetState= cpp.WGPUColorTargetState
+
+type WGPUColorTargetState = cpp.WGPUColorTargetState
 
 #typedef
 cpp struct WGPUFragmentState{}
+
 type WGPUFragmentState = cpp.WGPUFragmentState
 
 #typedef
 cpp struct WGPUPipelineLayoutDescriptor{}
+
 type WGPUPipelineLayoutDescriptor = cpp.WGPUPipelineLayoutDescriptor
 
 #typedef
 cpp struct WGPUPipelineLayout{}
+
 type WGPUPipelineLayout = cpp.WGPUPipelineLayout
 
 #typedef
 cpp struct WGPURenderPipelineDescriptor{}
+
 type WGPURenderPipelineDescriptor = cpp.WGPURenderPipelineDescriptor
 
 #typedef
 cpp struct WGPURenderPipeline{}
+
 type WGPURenderPipeline = cpp.WGPURenderPipeline
 
 #typedef
 cpp struct WGPUBufferDescriptor{}
+
 type WGPUBufferDescriptor = cpp.WGPUBufferDescriptor
 
 #typedef
 cpp struct WGPUBuffer{}
-type WGPUBuffer = cpp.WGPUBuffer
 
+type WGPUBuffer = cpp.WGPUBuffer
 
 #typedef
 cpp struct WGPURenderBundleEncoderDescriptor{}
+
 type WGPURenderBundleEncoderDescriptor = cpp.WGPURenderBundleEncoderDescriptor
 
 #typedef
-cpp struct WGPUColor{
-}
-type WGPUColor = cpp.WGPUColor
+cpp struct WGPUColor{}
 
+type WGPUColor = cpp.WGPUColor
 
 #typedef
 cpp struct WGPUSurfaceTexture{}
+
 type WGPUSurfaceTexture = cpp.WGPUSurfaceTexture
 
+#typedef
+cpp struct WGPUSurfaceConfiguration{}
+
+type WGPUSurfaceConfiguration = cpp.WGPUSurfaceConfiguration
+
 cpp fn wgpuCreateInstance(): WGPUInstance
-fn WgpuCreateInstance(): WGPUInstance{
-    ret unsafe {cpp.wgpuCreateInstance()}
+fn WgpuCreateInstance(): WGPUInstance {
+	ret unsafe { cpp.wgpuCreateInstance() }
 }
 
 cpp fn wgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture)
-fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture){
-    unsafe {cpp.wgpuSurfaceGetCurrentTexture(surface,texture)}
+fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture) {
+	unsafe { cpp.wgpuSurfaceGetCurrentTexture(surface, texture) }
 }
 
-cpp fn wgpuSurfaceConfigure(surface: WGPUSurface , config: *WGPUSurfaceConfiguration)
-fn WgpuSurfaceConfigure(surface: WGPUSurface , config: *WGPUSurfaceConfiguration){
-   unsafe {cpp.wgpuSurfaceConfigure(surface, config)}
+cpp fn wgpuSurfaceConfigure(surface: WGPUSurface, config: *WGPUSurfaceConfiguration)
+fn WgpuSurfaceConfigure(surface: WGPUSurface, config: *WGPUSurfaceConfiguration) {
+	unsafe { cpp.wgpuSurfaceConfigure(surface, config) }
 }
-

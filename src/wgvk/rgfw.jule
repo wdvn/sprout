@@ -1,25 +1,39 @@
-
 #typedef
-cpp struct RGFW_event{
-    // Because Jule does not support using a keyword as identifier => using tag field
-    _type: RGFW_eventType `#export:"type`
-    button: u8
+cpp struct RGFW_point{
+    x: i32
+    y: i32
 }
+type RGFW_point = cpp.RGFW_point
+#typedef
+cpp struct RGFW_event {
+	// Because Jule does not support using a keyword as identifier => using tag field
+	_type:  cpp.RGFW_eventType `#export:"type"`
+	button: RGFW_mouseButton
+	point: RGFW_point
+}
+
 type RGFW_event = cpp.RGFW_event
 
 #typedef
-cpp struct RGFW_window{
-    name: *u8
-    rect: cpp.RGFW_rect
-    flags: RGFW_windowFlags
+cpp struct RGFW_window {
+	name:  *u8
+	rect:  RGFW_rect
+	flags: RGFW_windowFlags
 }
-type RGFW_Window = cpp.RGFW_window
+
+type RGFW_window = cpp.RGFW_window
 
 #typedef
-cpp struct RGFW_rect{
-    x: i32
-    y: i32
-    w: i32
-    h: i32
+cpp struct RGFW_rect {
+	x: i32
+	y: i32
+	w: i32
+	h: i32
 }
+
 type RGFW_rect = cpp.RGFW_rect
+
+cpp fn RGFW_window_checkEvent(win: *RGFW_window, event: *RGFW_event ): RGFW_bool
+fn RGFW_window_checkEvent(win: *RGFW_window, event: *RGFW_event ): RGFW_bool{
+    ret unsafe{cpp.RGFW_window_checkEvent(win,event)}
+}
