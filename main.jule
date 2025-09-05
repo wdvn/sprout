@@ -20,7 +20,84 @@
 //    rgfw::RGFW_window_close(window);
 //}
 
+use "sprout/src/c"
+use "sprout/src/wgvk"
+use "std/fmt"
 
-fn main(){
+struct LoopContext {
+	window:       *wgvk::RGFW_window
+	surface:      wgvk::WGPUSurface
+	device:       wgvk::WGPUDevice
+	queue:        wgvk::WGPUQueue
+	vertexBuffer: wgvk::WGPUBuffer
+	rp:           wgvk::WGPURenderPipeline
+}
 
+// make loop render
+fn mainLoop(data: any) {
+	mut context := (*LoopContext)(data)
+	let mut event = wgvk::RGFW_event{}
+	for wgvk::RGFW_window_checkEvent(context.window, &event) {
+		if event._type == wgvk::RGFW_quit {
+			break
+		}
+		if event._type == wgvk::RGFW_mouseButtonPressed && event.button == wgvk::RGFW_mouseLeft {
+			fmt::Printf("You clicked at x: %d, y: %d\n", event.point.x, event.point.y)
+		}
+	}
+	mut surfaceTexture := wgvk::WGPUSurfaceTexture{}
+	wgvk::WgpuSurfaceGetCurrentTexture(context.surface, &surfaceTexture)
+
+	if (surfaceTexture.status != wgvk::WGPUSurfaceGetCurrentTextureStatus.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
+		let surfaceConfig = &wgvk::WGPUSurfaceConfiguration{
+			alphaMode: WGPUCompositeAlphaMode_Opaque,
+			presentMode: WGPUPresentMode_Fifo,
+			device: context.device,
+			format: WGPUTextureFormat_BGRA8Unorm,
+			width: 1000,
+			height: 1000,
+		}
+		wgvk::wgpuSurfaceGetCurrentTexture(context.surface, &surfaceTexture)
+	}
+	let viewDescriptor = &wgvk::WGPUTextureViewDescriptor{
+		baseArrayLayer: 0,
+		arrayLayerCount: 1,
+		baseMipLevel: 0,
+		mipLevelCount: 1,
+		format: wgvk::WGPUTextureFormat_BGRA8Unorm,
+		dimension: wgvk::WGPUTextureViewDimension_2D,
+		usage: wgvk::WGPUTextureUsage_RenderAttachment,
+		aspect: wgvk::WGPUTextureAspect_All,
+	}
+	let mut surfaceView = wgvk::WgpuTextureCreateView(surfaceTexture.texture, viewDescriptor)
+	let mut cenc = wgvk::wgpuDeviceCreateCommandEncoder(context.device, nil)
+	let bgColor = wgvk::WGPUColor{0.5, 0.2, 0, 0.5}
+	let mut colorAttachment = wgvk::WGPURenderPassColorAttachment{
+		clearValue: bgColor,
+		loadOp: wgvk::WGPULoadOp_Clear,
+		storeOp: wgvk::WGPUStoreOp_Store,
+		view: surfaceView,
+	}
+	rpenc = wgvk::WgpuCommandEncoderBeginRenderPass(cenc, &wgvk::WGPURenderPassDescriptor{
+		colorAttachmentCount: 1,
+		colorAttachments: &colorAttachment,
+	})
+	wgvk::WgpuRenderPassEncoderSetPipeline(rpenc, context.rp)
+	wgvk::WgpuRenderPassEncoderSetVertexBuffer(rpenc, 0, context.vertexBuffer, 0, wgvk::WGPU_WHOLE_SIZE)
+	wgvk::WgpuRenderPassEncoderDraw(rpenc, 3, 1, 0, 0)
+	wgvk::WgpuRenderPassEncoderEnd(rpenc)
+
+	let mut cBuffer = wgvk::WgpuCommandEncoderFinish(cenc, nil)
+	wgvk::WgpuQueueSubmit(context.queue, 1, &cBuffer)
+	wgvk::WgpuCommandEncoderRelease(cenc)
+	wgvk::WgpuCommandBufferRelease(cBuffer)
+	wgvk::WgpuRenderPassEncoderRelease(rpenc)
+	wgvk::WgpuTextureViewRelease(surfaceView)
+}
+
+fn main() {
+	instanceFeatures := {
+		wgvk::WGPUInstanceFeatureName_TimedWaitAny,
+		wgvk::WGPUInstanceFeatureName_ShaderSourceSPIRV,
+	}
 }

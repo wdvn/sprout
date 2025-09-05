@@ -1,4 +1,5 @@
 cpp use "./wgvk.hpp"
+cpp use "../../lib/wgvk/src/wgvk.c"
 
 type WGPUFlags = u64
 type WGPUBool = u32
