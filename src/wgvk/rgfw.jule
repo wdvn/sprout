@@ -1,0 +1,25 @@
+
+#typedef
+cpp struct RGFW_event{
+    // Because Jule does not support using a keyword as identifier => using tag field
+    _type: RGFW_eventType `#export:"type`
+    button: u8
+}
+type RGFW_event = cpp.RGFW_event
+
+#typedef
+cpp struct RGFW_window{
+    name: *u8
+    rect: cpp.RGFW_rect
+    flags: RGFW_windowFlags
+}
+type RGFW_Window = cpp.RGFW_window
+
+#typedef
+cpp struct RGFW_rect{
+    x: i32
+    y: i32
+    w: i32
+    h: i32
+}
+type RGFW_rect = cpp.RGFW_rect

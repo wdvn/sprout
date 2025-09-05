@@ -1,0 +1,78 @@
+fn RGFW_BIT(x:u32):u32{
+    ret 1<<x
+}
+
+//enum
+type RGFW_windowFlags = u32
+let RGFW_windowNoInitAPI: RGFW_windowFlags = RGFW_BIT(0)
+let RGFW_windowNoBorder: RGFW_windowFlags = RGFW_BIT(1)
+let RGFW_windowNoResize: RGFW_windowFlags = RGFW_BIT(2)
+let RGFW_windowAllowDND: RGFW_windowFlags = RGFW_BIT(3)
+let RGFW_windowHideMouse: RGFW_windowFlags = RGFW_BIT(4)
+let RGFW_windowFullscreen: RGFW_windowFlags = RGFW_BIT(5)
+let RGFW_windowTransparent: RGFW_windowFlags = RGFW_BIT(6)
+let RGFW_windowCenter: RGFW_windowFlags = RGFW_BIT(7)
+let RGFW_windowOpenglSoftware: RGFW_windowFlags = RGFW_BIT(8)
+let RGFW_windowCocoaCHDirToRes: RGFW_windowFlags = RGFW_BIT(9)
+let RGFW_windowScaleToMonitor: RGFW_windowFlags = RGFW_BIT(10)
+let RGFW_windowHide: RGFW_windowFlags = RGFW_BIT(11)
+let RGFW_windowMaximize: RGFW_windowFlags = RGFW_BIT(12)
+let RGFW_windowCenterCursor: RGFW_windowFlags = RGFW_BIT(13)
+let RGFW_windowFloating: RGFW_windowFlags = RGFW_BIT(14)
+let RGFW_windowFreeOnClose: RGFW_windowFlags = RGFW_BIT(15)
+let RGFW_windowFocusOnShow: RGFW_windowFlags = RGFW_BIT(16)
+let RGFW_windowMinimize: RGFW_windowFlags = RGFW_BIT(17)
+let RGFW_windowFocus: RGFW_windowFlags = RGFW_BIT(18)
+let RGFW_windowedFullscreen: RGFW_windowFlags = RGFW_BIT(1) | RGFW_BIT(12)
+
+enum RGFW_eventType:u32{
+	RGFW_eventNone : 0, /*!< no event has been sent */
+ 	RGFW_keyPressed, /* a key has been pressed */
+	RGFW_keyReleased, /*!< a key has been released */
+	/*! key event note
+		the code of the key pressed is stored in
+		RGFW_event.key
+		!!Keycodes defined at the bottom of the RGFW_HEADER part of this file!!
+
+		while a string version is stored in
+		RGFW_event.KeyString
+
+		RGFW_event.keyMod holds the current keyMod
+		this means if CapsLock, NumLock are active or not
+	*/
+	RGFW_mouseButtonPressed, /*!< a mouse button has been pressed (left,middle,right) */
+	RGFW_mouseButtonReleased, /*!< a mouse button has been released (left,middle,right) */
+	RGFW_mousePosChanged, /*!< the position of the mouse has been changed */
+	/*! mouse event note
+		the x and y of the mouse can be found in the vector, RGFW_event.point
+
+		RGFW_event.button holds which mouse button was pressed
+	*/
+	RGFW_windowMoved, /*!< the window was moved (by the user) */
+	RGFW_windowResized, /*!< the window was resized (by the user), [on WASM this means the browser was resized] */
+	RGFW_focusIn, /*!< window is in focus now */
+	RGFW_focusOut, /*!< window is out of focus now */
+	RGFW_mouseEnter, /* mouse entered the window */
+	RGFW_mouseLeave, /* mouse left the window */
+	RGFW_windowRefresh, /* The window content needs to be refreshed */
+
+	/* attribs change event note
+		The event data is sent straight to the window structure
+		with win->r.x, win->r.y, win->r.w and win->r.h
+	*/
+	RGFW_quit, /*!< the user clicked the quit button */
+	RGFW_DND, /*!< a file has been dropped into the window */
+	RGFW_DNDInit, /*!< the start of a dnd event, when the place where the file drop is known */
+	/* dnd data note
+		The x and y coords of the drop are stored in the vector RGFW_event.point
+
+		RGFW_event.droppedFilesCount holds how many files were dropped
+
+		This is also the size of the array which stores all the dropped file string,
+		RGFW_event.droppedFiles
+	*/
+	RGFW_windowMaximized, /*!< the window was maximized */
+	RGFW_windowMinimized, /*!< the window was minimized */
+	RGFW_windowRestored, /*!< the window was restored */
+	RGFW_scaleUpdated /*!< content scale factor changed */
+}
