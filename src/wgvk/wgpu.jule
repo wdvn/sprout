@@ -1,3 +1,6 @@
+use "sprout/src/c"
+
+type size_t = u32
 cpp type WGPUFlags: u64
 type WGPUFlags = cpp.WGPUFlags
 type WGPUTextureUsage = WGPUFlags
@@ -12,25 +15,39 @@ const WGPUTextureUsage_TransientAttachment: WGPUTextureUsage = 0x000000000000100
 const WGPUTextureUsage_StorageAttachment: WGPUTextureUsage = 0x0000000000002000
 
 cpp type WGPUBool: u32
+type WGPUBool = cpp.WGPUBool
 cpp type Bool32: u32
 
 #typedef
-cpp struct WGPUInstanceDescriptor{}
+cpp struct WGPUInstanceDescriptor {
+	nextInChain:          *WGPUChainedStruct
+	requiredFeatureCount: u32
+	requiredFeatures:     []WGPUInstanceFeatureName
+	requiredLimits:       *WGPUInstanceLimits
+}
 
 type WGPUInstanceDescriptor = cpp.WGPUInstanceDescriptor
 
 #typedef
-cpp struct WGPUInstance{}
-
-type WGPUInstance = cpp.WGPUInstance
-
-#typedef
-cpp struct WGPURequestAdapterOptions{}
+cpp struct WGPURequestAdapterOptions {
+	nextInChain:          *WGPUChainedStruct
+	featureLevel:         WGPUFeatureLevel
+	powerPreference:      WGPUPowerPreference
+	forceFallbackAdapter: WGPUBool
+	backendType:          WGPUBackendType
+	compatibleSurface:    *WGPUSurface
+}
 
 type WGPURequestAdapterOptions = cpp.WGPURequestAdapterOptions
 
 #typedef
-cpp struct WGPURequestAdapterCallbackInfo{}
+cpp struct WGPURequestAdapterCallbackInfo {
+	nextInChain: WGPUChainedStruct
+	mode:        WGPUCallbackMode
+	callback:    WGPURequestAdapterCallback
+	userdata1:   c::Void
+	userdata2:   c::Void
+}
 
 type WGPURequestAdapterCallbackInfo = cpp.WGPURequestAdapterCallbackInfo
 
@@ -38,16 +55,6 @@ type WGPURequestAdapterCallbackInfo = cpp.WGPURequestAdapterCallbackInfo
 cpp struct WGPURequestDeviceCallbackInfo{}
 
 type WGPURequestDeviceCallbackInfo = cpp.WGPURequestDeviceCallbackInfo
-
-#typedef
-cpp struct WGPUAdapter{}
-
-type WGPUAdapter = cpp.WGPUAdapter
-
-#typedef
-cpp struct WGPUFuture{}
-
-type WGPUFuture = cpp.WGPUFuture
 
 #typedef
 cpp struct WGPUFutureWaitInfo{}
@@ -65,21 +72,6 @@ cpp struct WGPUDeviceDescriptor{}
 type WGPUDeviceDescriptor = cpp.WGPUDeviceDescriptor
 
 #typedef
-cpp struct WGPUDevice{}
-
-type WGPUDevice = cpp.WGPUDevice
-
-#typedef
-cpp struct WGPUQueue{}
-
-type WGPUQueue = cpp.WGPUQueue
-
-#typedef
-cpp struct WGPUSurface{}
-
-type WGPUSurface = cpp.WGPUSurface
-
-#typedef
 cpp struct WGPUSurfaceCapabilities{}
 
 type WGPUSurfaceCapabilities = cpp.WGPUSurfaceCapabilities
@@ -93,11 +85,6 @@ type WGPUShaderSourceSPIRV = cpp.WGPUShaderSourceSPIRV
 cpp struct WGPUShaderModuleDescriptor{}
 
 type WGPUShaderModuleDescriptor = cpp.WGPUShaderModuleDescriptor
-
-#typedef
-cpp struct WGPUShaderModule{}
-
-type WGPUShaderModule = cpp.WGPUShaderModule
 
 #typedef
 cpp struct WGPUVertexAttribute{}
@@ -130,19 +117,9 @@ cpp struct WGPUPipelineLayoutDescriptor{}
 type WGPUPipelineLayoutDescriptor = cpp.WGPUPipelineLayoutDescriptor
 
 #typedef
-cpp struct WGPUPipelineLayout{}
-
-type WGPUPipelineLayout = cpp.WGPUPipelineLayout
-
-#typedef
 cpp struct WGPURenderPipelineDescriptor{}
 
 type WGPURenderPipelineDescriptor = cpp.WGPURenderPipelineDescriptor
-
-#typedef
-cpp struct WGPURenderPipeline{}
-
-type WGPURenderPipeline = cpp.WGPURenderPipeline
 
 #typedef
 cpp struct WGPUBufferDescriptor{}
@@ -150,23 +127,19 @@ cpp struct WGPUBufferDescriptor{}
 type WGPUBufferDescriptor = cpp.WGPUBufferDescriptor
 
 #typedef
-cpp struct WGPUBuffer{}
-
-type WGPUBuffer = cpp.WGPUBuffer
-
-#typedef
 cpp struct WGPURenderBundleEncoderDescriptor{}
 
 type WGPURenderBundleEncoderDescriptor = cpp.WGPURenderBundleEncoderDescriptor
 
 #typedef
-cpp struct WGPUColor{}
+cpp struct WGPUColor {
+	r: f64
+	g: f64
+	b: f64
+	a: f64
+}
 
 type WGPUColor = cpp.WGPUColor
-
-#typedef
-cpp struct WGPUTexture{}
-type WGPUTexture =cpp.WGPUTexture
 
 #typedef
 cpp struct WGPUSurfaceTexture {
@@ -217,17 +190,124 @@ cpp struct WGPUTextureViewDescriptor {
 
 type WGPUTextureViewDescriptor = cpp.WGPUTextureViewDescriptor
 
-cpp fn wgpuCreateInstance(): WGPUInstance
-fn WgpuCreateInstance(): WGPUInstance {
-	ret unsafe { cpp.wgpuCreateInstance() }
+#typedef
+cpp struct WGPUCommandEncoderDescriptor {
+	nextInChain: *WGPUChainedStruct
+	label:       WGPUStringView
 }
 
-cpp fn wgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture)
-fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture) {
-	unsafe { cpp.wgpuSurfaceGetCurrentTexture(surface, texture) }
+type WGPUCommandEncoderDescriptor = cpp.WGPUCommandEncoderDescriptor
+
+#typedef
+cpp struct WGPUInstanceLimits {
+	nextInChain:          *WGPUChainedStruct
+	timedWaitAnyMaxCount: u32
 }
 
-cpp fn wgpuSurfaceConfigure(surface: WGPUSurface, config: *WGPUSurfaceConfiguration)
-fn WgpuSurfaceConfigure(surface: WGPUSurface, config: *WGPUSurfaceConfiguration) {
-	unsafe { cpp.wgpuSurfaceConfigure(surface, config) }
+type WGPUInstanceLimits = cpp.WGPUInstanceLimits
+
+#typedef
+cpp struct WGPURenderPassColorAttachment {
+	nextInChain:   *WGPUChainedStruct
+	view:          WGPUTextureView
+	resolveTarget: WGPUTextureView
+	depthSlice:    u32
+	loadOp:        WGPULoadOp
+	storeOp:       WGPUStoreOp
+	clearValue:    WGPUColor
 }
+
+type WGPURenderPassColorAttachment = cpp.WGPURenderPassColorAttachment
+
+#typedef
+cpp struct WGPURequestAdapterCallback{}
+
+type WGPURequestAdapterCallback = cpp.WGPURequestAdapterCallback
+
+#typedef
+cpp struct WGPURenderPassDescriptor {
+	nextInChain:            WGPUChainedStruct
+	label:                  WGPUStringView
+	colorAttachmentCount:   u32
+	colorAttachments:       *WGPURenderPassColorAttachment
+	depthStencilAttachment: *WGPURenderPassDepthStencilAttachment
+	occlusionQuerySet:      WGPUQuerySet
+	timestampWrites:        WGPUPassTimestampWrites
+}
+
+type WGPURenderPassDescriptor = cpp.WGPURenderPassDescriptor
+
+#typedef
+cpp struct WGPURenderPassDepthStencilAttachment {
+	nextInChain:       *WGPUChainedStruct
+	view:              WGPUTextureView
+	depthLoadOp:       WGPULoadOp
+	depthStoreOp:      WGPUStoreOp
+	depthClearValue:   f32
+	depthReadOnly:     u32
+	stencilLoadOp:     WGPULoadOp
+	stencilStoreOp:    WGPUStoreOp
+	stencilClearValue: u32
+	stencilReadOnly:   u32
+}
+
+type WGPURenderPassDepthStencilAttachment = cpp.WGPURenderPassDepthStencilAttachment
+
+#typedef
+cpp struct WGPUPassTimestampWrites {
+	nextInChain:               WGPUChainedStruct
+	querySet:                  WGPUQuerySet
+	beginningOfPassWriteIndex: u32
+	endOfPassWriteIndex:       u32
+}
+
+type WGPUPassTimestampWrites = cpp.WGPUPassTimestampWrites
+
+#typedef
+cpp struct WGPUTexelCopyBufferInfo {
+	layout: WGPUTexelCopyBufferLayout
+	buffer: WGPUBuffer
+}
+
+#typedef
+cpp struct WGPUTexelCopyBufferLayout {
+	offset:       u64
+	bytesPerRow:  u32
+	rowsPerImage: u32
+}
+
+#typedef
+cpp struct WGPUTexelCopyTextureInfo {
+	texture:  WGPUTexture
+	mipLevel: u32
+	origin:   WGPUOrigin3D
+	aspect:   WGPUTextureAspect
+}
+
+#typedef
+cpp struct WGPUExtent3D {
+	width:              u32
+	height:             u32
+	depthOrArrayLayers: u32
+}
+
+#typedef
+cpp struct WGPUOrigin3D {
+	x: u32
+	y: u32
+	z: u32
+}
+
+#typedef
+cpp struct WGPUCommandBufferDescriptor {
+	nextInChain: WGPUChainedStruct
+	label:       WGPUStringView
+}
+
+//************
+type WGPUTexelCopyBufferInfo = cpp.WGPUTexelCopyBufferInfo
+type WGPUTexelCopyBufferLayout = cpp.WGPUTexelCopyBufferLayout
+type WGPUTexelCopyTextureInfo = cpp.WGPUTexelCopyTextureInfo
+type WGPUExtent3D = cpp.WGPUExtent3D
+type WGPUOrigin3D = cpp.WGPUOrigin3D
+type WGPUCommandBufferDescriptor = cpp.WGPUCommandBufferDescriptor

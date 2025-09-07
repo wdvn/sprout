@@ -77,3 +77,110 @@ cpp struct WGPURaytracingPipelineImp{}
 
 #typedef
 cpp struct WGPURaytracingPassEncoderImp{}
+
+#typedef
+cpp struct WGPUSurfaceImpl{}
+
+#typedef
+cpp struct WGPUBindGroupLayoutImpl{}
+
+#typedef
+cpp struct WGPUPipelineLayoutImpl{}
+
+#typedef
+cpp struct WGPUBindGroupImpl{}
+
+#typedef
+cpp struct WGPUBufferImpl{}
+
+#typedef
+cpp struct WGPUQueueImpl{}
+
+#typedef
+cpp struct WGPUQuerySetImpl{}
+
+#typedef
+cpp struct WGPUInstanceImpl{}
+
+#typedef
+cpp struct WGPUAdapterImpl{}
+
+#typedef
+cpp struct WGPUDeviceImpl{}
+
+#typedef
+cpp struct WGPURenderPassEncoderImpl{}
+
+#typedef
+cpp struct WGPUComputePassEncoderImpl{}
+
+#typedef
+cpp struct WGPURenderBundleImpl{}
+
+#typedef
+cpp struct WGPURenderBundleEncoderImpl{}
+
+#typedef
+cpp struct WGPUCommandBufferImpl{}
+
+#typedef
+cpp struct WGPUCommandEncoderImpl{}
+
+#typedef
+cpp struct WGPUTextureImpl{}
+
+#typedef
+cpp struct WGPUTextureViewImpl{}
+
+#typedef
+cpp struct WGPUSamplerImpl{}
+
+#typedef
+cpp struct WGPUFenceImpl{}
+
+#typedef
+cpp struct WGPURenderPipelineImpl{}
+
+#typedef
+cpp struct WGPUShaderModuleImpl{}
+
+#typedef
+cpp struct WGPUComputePipelineImpl{}
+
+#typedef
+cpp struct WGPURayTracingAccelerationContainerImpl{}
+
+#typedef
+cpp struct WGPURayTracingShaderBindingTableImpl{}
+
+//********************************
+type WGPUTexture = cpp.WGPUTextureImp
+type WGPUTextureView = cpp.WGPUTextureViewImp
+type WGPUBuffer = cpp.WGPUBufferImp
+type WGPUBindGroup = cpp.WGPUBindGroupImp
+type WGPUBindGroupLayout = cpp.WGPUBindGroupLayoutImp
+type WGPUPipelineLayout = cpp.WGPUPipelineLayoutImp
+type WGPUFuture = cpp.WGPUFutureImp
+type WGPURenderPassEncoder = cpp.WGPURenderPassEncoderImp
+type WGPUComputePassEncoder = cpp.WGPUComputePassEncoderImp
+type WGPURenderBundle = cpp.WGPURenderBundleImp
+type WGPURenderBundleEncoder = cpp.WGPURenderBundleEncoderImp
+type WGPUCommandEncoder = cpp.WGPUCommandEncoderImp
+type WGPUCommandBuffer = cpp.WGPUCommandBufferImp
+type WGPUQueue = cpp.WGPUQueueImp
+type WGPUQuerySet = cpp.WGPUQuerySetImp
+type WGPUInstance = cpp.WGPUInstanceImp
+type WGPUAdapter = cpp.WGPUAdapterImp
+type WGPUDevice = cpp.WGPUDeviceImp
+type WGPUSurface = cpp.WGPUSurfaceImp
+type WGPUShaderModule = cpp.WGPUShaderModuleImp
+type WGPURenderPipeline = cpp.WGPURenderPipelineImp
+type WGPUComputePipeline = cpp.WGPUComputePipelineImp
+type WGPUTopLevelAccelerationStructure = cpp.WGPUTopLevelAccelerationStructureImp
+type WGPUBottomLevelAccelerationStructure = cpp.WGPUBottomLevelAccelerationStructureImp
+type WGPURaytracingPipeline = cpp.WGPURaytracingPipelineImp
+type WGPURaytracingPassEncoder = cpp.WGPURaytracingPassEncoderImp
+
+type WGPUSampler = cpp.WGPUSamplerImpl
+type WGPUFence = cpp.WGPUFenceImpl
+type WGPURayTracingShaderBindingTable = cpp.WGPURayTracingShaderBindingTableImpl

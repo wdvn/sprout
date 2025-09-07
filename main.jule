@@ -1,4 +1,3 @@
-
 #pass "-I./lib/wgvk/include/external"
 #pass "-I./lib/wgvk/include"
 #pass "-L./lib/wgvk/build/libwgvk.a"
@@ -20,7 +19,7 @@ struct LoopContext {
 fn mainLoop(mut data: &LoopContext) {
 	mut context := data
 	let mut event = wgvk::RGFW_event{}
-	for wgvk::RGFW_window_checkEvent(context.window, &event) == wgvk::RGFW_TRUE{
+	for wgvk::RGFW_window_checkEvent(context.window, &event) == wgvk::RGFW_TRUE {
 		if event._type == wgvk::RGFW_quit {
 			break
 		}
@@ -32,7 +31,7 @@ fn mainLoop(mut data: &LoopContext) {
 	wgvk::WgpuSurfaceGetCurrentTexture(context.surface, &surfaceTexture)
 
 	if (surfaceTexture.status != wgvk::WGPUSurfaceGetCurrentTextureStatus.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal) {
-		let surfaceConfig = &wgvk::WGPUSurfaceConfiguration{
+		let surfaceConfig = wgvk::WGPUSurfaceConfiguration{
 			alphaMode: wgvk::WGPUCompositeAlphaMode.WGPUCompositeAlphaMode_Opaque,
 			presentMode: wgvk::WGPUPresentMode.WGPUPresentMode_Fifo,
 			device: context.device,
@@ -40,31 +39,33 @@ fn mainLoop(mut data: &LoopContext) {
 			width: 1000,
 			height: 1000,
 		}
-		wgvk::wgpuSurfaceGetCurrentTexture(context.surface, &surfaceTexture)
+		wgvk::WgpuSurfaceConfigure(context.surface, &surfaceConfig)
+		wgvk::WgpuSurfaceGetCurrentTexture(context.surface, &surfaceTexture)
 	}
-	let viewDescriptor = &wgvk::WGPUTextureViewDescriptor{
+	let viewDescriptor = wgvk::WGPUTextureViewDescriptor{
 		baseArrayLayer: 0,
 		arrayLayerCount: 1,
 		baseMipLevel: 0,
 		mipLevelCount: 1,
-		format: wgvk::WGPUTextureFormat.WGPUTextureFormat_BGRA8Unorm,     
-		dimension: wgvk::WGPUTextureViewDimension_2D,
+		format: wgvk::WGPUTextureFormat.WGPUTextureFormat_BGRA8Unorm,
+		dimension: wgvk::WGPUTextureViewDimension.WGPUTextureViewDimension_2D,
 		usage: wgvk::WGPUTextureUsage_RenderAttachment,
-		aspect: wgvk::WGPUTextureAspect_All,
+		aspect: wgvk::WGPUTextureAspect.WGPUTextureAspect_All,
 	}
-	let mut surfaceView = wgvk::WgpuTextureCreateView(surfaceTexture.texture, viewDescriptor)
-	let mut cenc = wgvk::wgpuDeviceCreateCommandEncoder(context.device, nil)
+	let mut surfaceView = wgvk::WgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor)
+	let mut cenc = wgvk::WgpuDeviceCreateCommandEncoder(context.device, nil)
 	let bgColor = wgvk::WGPUColor{0.5, 0.2, 0, 0.5}
 	let mut colorAttachment = wgvk::WGPURenderPassColorAttachment{
 		clearValue: bgColor,
-		loadOp: wgvk::WGPULoadOp_Clear,
-		storeOp: wgvk::WGPUStoreOp_Store,
+		loadOp: wgvk::WGPULoadOp.WGPULoadOp_Clear,
+		storeOp: wgvk::WGPUStoreOp.WGPUStoreOp_Store,
 		view: surfaceView,
 	}
-	rpenc = wgvk::WgpuCommandEncoderBeginRenderPass(cenc, &wgvk::WGPURenderPassDescriptor{
+	let rpdes = wgvk::WGPURenderPassDescriptor{
 		colorAttachmentCount: 1,
 		colorAttachments: &colorAttachment,
-	})
+	}
+	let rpenc = wgvk::WgpuCommandEncoderBeginRenderPass(cenc, &rpdes)
 	wgvk::WgpuRenderPassEncoderSetPipeline(rpenc, context.rp)
 	wgvk::WgpuRenderPassEncoderSetVertexBuffer(rpenc, 0, context.vertexBuffer, 0, wgvk::WGPU_WHOLE_SIZE)
 	wgvk::WgpuRenderPassEncoderDraw(rpenc, 3, 1, 0, 0)
@@ -79,9 +80,32 @@ fn mainLoop(mut data: &LoopContext) {
 }
 
 fn main() {
-	let instanceFeatures :[2]wgvk::WGPUInstanceFeatureName= [
+	let mut instanceFeatures: []wgvk::WGPUInstanceFeatureName = [
 		wgvk::WGPUInstanceFeatureName.WGPUInstanceFeatureName_TimedWaitAny,
 		wgvk::WGPUInstanceFeatureName.WGPUInstanceFeatureName_ShaderSourceSPIRV,
 	]
+	let mut instanceDescriptor = wgvk::WGPUInstanceDescriptor{
+		nextInChain: nil,
+		requiredFeatures: instanceFeatures,
+		requiredFeatureCount: 2,
+	}
+	let mut instance = wgvk::WgpuCreateInstance(&instanceDescriptor)
+	let mut adapterOptions = &wgvk::WGPURequestAdapterOptions{featureLevel: wgvk::WGPUFeatureLevel.WGPUFeatureLevel_Core}
+	let requestedAdapter: &wgvk::WGPUAdapter = nil
+	let adapterCallback = wgvk::WGPURequestAdapterCallbackInfo{
+		mode: wgvk::WGPUCallbackMode.WGPUCallbackMode_WaitAnyOnly,
+		callback: adapterCallbackFunction,
+		userdata1: requestedAdapter,
+	}
+
+	mut ctx := LoopContext{
+		window: window,
+		surface: surface,
+		device: device,
+		queue: queue,
+		vertexBuffer: vertexBuffer,
+		rp: rp,
+	}
+
 	fmt::Println("start")
 }

@@ -1,0 +1,208 @@
+cpp fn wgpuCreateInstance(des: *WGPUInstanceDescriptor): WGPUInstance
+cpp fn wgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture)
+cpp fn wgpuSurfaceConfigure(surface: WGPUSurface, config: *WGPUSurfaceConfiguration)
+cpp fn wgpuTextureCreateView(texture: WGPUTexture, descriptor: *WGPUTextureViewDescriptor): WGPUTextureView
+cpp fn wgpuDeviceCreateCommandEncoder(device: WGPUDevice, des: *WGPUCommandEncoderDescriptor): WGPUCommandEncoder
+cpp fn wgpuCommandEncoderBeginRenderPass(enc: WGPUCommandEncoder, rpdesc: *WGPURenderPassDescriptor): WGPURenderPassEncoder
+
+cpp fn wgpuCommandEncoderFinish(commandEncoder: WGPUCommandEncoder, descriptor: *WGPUCommandBufferDescriptor): WGPUCommandBuffer
+
+//---------------------------------
+cpp fn wgpuDeviceTick(device: WGPUDevice)
+cpp fn wgpuQueueSubmit(queue: WGPUQueue, commandCount: u32, buffers: *WGPUCommandBuffer)
+cpp fn wgpuQueueWaitIdle(queue: WGPUQueue)
+cpp fn wgpuCommandEncoderCopyBufferToBuffer(commandEncoder: WGPUCommandEncoder, source: WGPUBuffer, sourceOffset: u64, destination: WGPUBuffer, destinationOffset: u64, size: u64)
+cpp fn wgpuCommandEncoderCopyBufferToTexture(commandEncoder: WGPUCommandEncoder, source: *WGPUTexelCopyBufferInfo, destination: *WGPUTexelCopyTextureInfo, copySize: *WGPUExtent3D)
+cpp fn wgpuCommandEncoderCopyTextureToBuffer(commandEncoder: WGPUCommandEncoder, source: *WGPUTexelCopyTextureInfo, destination: *WGPUTexelCopyBufferInfo, copySize: *WGPUExtent3D)
+cpp fn wgpuCommandEncoderCopyTextureToTexture(commandEncoder: WGPUCommandEncoder, source: *WGPUTexelCopyTextureInfo, destination: *WGPUTexelCopyTextureInfo, copySize: *WGPUExtent3D)
+cpp fn wgpuRenderPassEncoderDraw(rpenc: WGPURenderPassEncoder, vertices: u32, instances: u32, firstvertex: u32, firstinstance: u32)
+cpp fn wgpuRenderPassEncoderDrawIndexed(rpenc: WGPURenderPassEncoder, indices: u32, instances: u32, firstindex: u32, basevertex: i32, firstinstance: u32)
+cpp fn wgpuRenderPassEncoderSetBindGroup(rpenc: WGPURenderPassEncoder, groupIndex: u32, group: WGPUBindGroup, dynamicOffsetCount: size_t, dynamicOffsets: *u32)
+cpp fn wgpuRenderPassEncoderSetPipeline(rpenc: WGPURenderPassEncoder, renderPipeline: WGPURenderPipeline)
+cpp fn wgpuRenderPassEncoderEnd(rrpenc: WGPURenderPassEncoder)
+cpp fn wgpuRenderPassEncoderRelease(rpenc: WGPURenderPassEncoder)
+cpp fn wgpuRenderPassEncoderAddRef(rpenc: WGPURenderPassEncoder)
+cpp fn wgpuRenderPassEncoderSetIndexBuffer(renderPassEncoder: WGPURenderPassEncoder, buffer: WGPUBuffer, format: WGPUIndexFormat, offset: u64, size: u64)
+cpp fn wgpuRenderPassEncoderSetVertexBuffer(rpe: WGPURenderPassEncoder, binding: u32, buffer: WGPUBuffer, offset: size_t, size: u64)
+cpp fn wgpuRenderPassEncoderDrawIndexedIndirect(renderPassEncoder: WGPURenderPassEncoder, indirectBuffer: WGPUBuffer, indirectOffset: u64)               //WGPU_FUNCTION_ATTRIBUTE
+cpp fn wgpuRenderPassEncoderDrawIndirect(renderPassEncoder: WGPURenderPassEncoder, indirectBuffer: WGPUBuffer, indirectOffset: u64)                      //WGPU_FUNCTION_ATTRIBUTE
+cpp fn wgpuRenderPassEncoderSetBlendConstant(renderPassEncoder: WGPURenderPassEncoder, color: *WGPUColor)                                                //WGPU_FUNCTION_ATTRIBUTE
+cpp fn wgpuRenderPassEncoderSetViewport(renderPassEncoder: WGPURenderPassEncoder, x: f32, y: f32, width: f32, height: f32, minDepth: f32, maxDepth: f32) //WGPU_FUNCTION_ATTRIBUTE
+cpp fn wgpuRenderPassEncoderSetScissorRect(renderPassEncoder: WGPURenderPassEncoder, x: u32, y: u32, width: u32, height: u32)
+
+//-------------------------------------------------------------------------------------------------
+
+cpp fn wgpuInstanceAddRef(instance: WGPUInstance)
+cpp fn wgpuAdapterAddRef(adapter: WGPUAdapter)
+cpp fn wgpuDeviceAddRef(device: WGPUDevice)
+cpp fn wgpuQueueAddRef(device: WGPUQueue)
+cpp fn wgpuReleaseRaytracingPassEncoder(rtenc: WGPURaytracingPassEncoder)
+cpp fn wgpuTextureAddRef(texture: WGPUTexture)
+cpp fn wgpuTextureViewAddRef(textureView: WGPUTextureView)
+cpp fn wgpuSamplerAddRef(texture: WGPUSampler)
+cpp fn wgpuBufferAddRef(buffer: WGPUBuffer)
+cpp fn wgpuBindGroupAddRef(bindGroup: WGPUBindGroup)
+cpp fn wgpuShaderModuleAddRef(module: WGPUShaderModule)
+cpp fn wgpuBindGroupLayoutAddRef(bindGroupLayout: WGPUBindGroupLayout)
+cpp fn wgpuPipelineLayoutAddRef(pipelineLayout: WGPUPipelineLayout)
+cpp fn wgpuCommandEncoderRelease(commandBuffer: WGPUCommandEncoder)
+cpp fn wgpuCommandBufferRelease(commandBuffer: WGPUCommandBuffer)
+cpp fn wgpuInstanceRelease(instance: WGPUInstance)
+cpp fn wgpuAdapterRelease(adapter: WGPUAdapter)
+cpp fn wgpuDeviceRelease(device: WGPUDevice)
+cpp fn wgpuQueueRelease(device: WGPUQueue)
+cpp fn wgpuComputePassEncoderRelease(rpenc: WGPUComputePassEncoder)
+cpp fn wgpuComputePipelineRelease(pipeline: WGPUComputePipeline)
+cpp fn wgpuRenderPipelineRelease(pipeline: WGPURenderPipeline)
+cpp fn wgpuBufferRelease(buffer: WGPUBuffer)
+cpp fn wgpuBindGroupRelease(commandBuffer: WGPUBindGroup)
+cpp fn wgpuBindGroupLayoutRelease(commandBuffer: WGPUBindGroupLayout)
+
+//cpp fn  wgpuBindGroupLayoutRelease(bglayout:WGPUBindGroupLayout )
+cpp fn wgpuPipelineLayoutRelease(layout: WGPUPipelineLayout)
+cpp fn wgpuTextureRelease(texture: WGPUTexture)
+cpp fn wgpuTextureViewRelease(view: WGPUTextureView)
+cpp fn wgpuSamplerRelease(sampler: WGPUSampler)
+cpp fn wgpuShaderModuleRelease(module: WGPUShaderModule)
+
+cpp fn wgpuResetCommandBuffer(commandEncoder: WGPUCommandBuffer): WGPUCommandEncoder
+
+//**********************************
+fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture) {
+	unsafe { cpp.wgpuSurfaceGetCurrentTexture(surface, texture) }
+}
+fn WgpuDeviceCreateCommandEncoder(device: WGPUDevice, des: *WGPUCommandEncoderDescriptor): WGPUCommandEncoder {
+	ret unsafe { cpp.wgpuDeviceCreateCommandEncoder(device, des) }
+}
+fn WgpuSurfaceConfigure(surface: WGPUSurface, config: *WGPUSurfaceConfiguration) {
+	unsafe { cpp.wgpuSurfaceConfigure(surface, config) }
+}
+fn WgpuTextureCreateView(texture: WGPUTexture, descriptor: *WGPUTextureViewDescriptor): WGPUTextureView {
+	ret unsafe { cpp.wgpuTextureCreateView(texture, descriptor) }
+}
+fn WgpuCommandEncoderBeginRenderPass(enc: WGPUCommandEncoder, rpdesc: *WGPURenderPassDescriptor): WGPURenderPassEncoder {
+	ret unsafe { cpp.wgpuCommandEncoderBeginRenderPass(enc, rpdesc) }
+}
+
+fn WgpuCreateInstance(des: *WGPUInstanceDescriptor): WGPUInstance {
+	ret unsafe { cpp.wgpuCreateInstance(des) }
+}
+
+fn WgpuRenderPassEncoderSetPipeline(rpenc: WGPURenderPassEncoder, renderPipeline: WGPURenderPipeline) {
+	unsafe { cpp.wgpuRenderPassEncoderSetPipeline(rpenc, renderPipeline) }
+}
+
+fn WgpuRenderPassEncoderSetVertexBuffer(rpe: WGPURenderPassEncoder, binding: u32, buffer: WGPUBuffer, offset: size_t, size: u64) {
+	unsafe { cpp.wgpuRenderPassEncoderSetVertexBuffer(rpe, binding, buffer, offset, size) }
+}
+
+fn WgpuRenderPassEncoderDraw(rpenc: WGPURenderPassEncoder, vertices: u32, instances: u32, firstvertex: u32, firstinstance: u32) {
+	unsafe { cpp.wgpuRenderPassEncoderDraw(rpenc, vertices, instances, firstvertex, firstinstance) }
+}
+
+fn WgpuRenderPassEncoderEnd(rrpenc: WGPURenderPassEncoder) {
+	unsafe { cpp.wgpuRenderPassEncoderEnd(rrpenc) }
+}
+
+fn WgpuCommandEncoderFinish(commandEncoder: WGPUCommandEncoder, descriptor: *WGPUCommandBufferDescriptor): WGPUCommandBuffer {
+	ret unsafe { cpp.wgpuCommandEncoderFinish(commandEncoder, descriptor) }
+}
+
+fn WgpuQueueSubmit(queue: WGPUQueue, commandCount: size_t, buffers: *WGPUCommandBuffer) {
+	unsafe { cpp.wgpuQueueSubmit(queue, commandCount, buffers) }
+}
+
+fn WgpuInstanceAddRef(instance: WGPUInstance) {
+	unsafe { cpp.wgpuInstanceAddRef(instance) }
+}
+fn WgpuAdapterAddRef(adapter: WGPUAdapter) {
+	unsafe { cpp.wgpuAdapterAddRef(adapter) }
+}
+fn WgpuDeviceAddRef(device: WGPUDevice) {
+	unsafe { cpp.wgpuDeviceAddRef(device) }
+}
+fn WgpuQueueAddRef(device: WGPUQueue) {
+	unsafe { cpp.wgpuQueueAddRef(device) }
+}
+fn WgpuReleaseRaytracingPassEncoder(rtenc: WGPURaytracingPassEncoder) {
+	unsafe { cpp.wgpuReleaseRaytracingPassEncoder(rtenc) }
+}
+fn WgpuTextureAddRef(texture: WGPUTexture) {
+	unsafe { cpp.wgpuTextureAddRef(texture) }
+}
+fn WgpuTextureViewAddRef(textureView: WGPUTextureView) {
+	unsafe { cpp.wgpuTextureViewAddRef(textureView) }
+}
+fn WgpuSamplerAddRef(texture: WGPUSampler) {
+	unsafe { cpp.wgpuSamplerAddRef(texture) }
+}
+fn WgpuBufferAddRef(buffer: WGPUBuffer) {
+	unsafe { cpp.wgpuBufferAddRef(buffer) }
+}
+fn WgpuBindGroupAddRef(bindGroup: WGPUBindGroup) {
+	unsafe { cpp.wgpuBindGroupAddRef(bindGroup) }
+}
+fn WgpuShaderModuleAddRef(module: WGPUShaderModule) {
+	unsafe { cpp.wgpuShaderModuleAddRef(module) }
+}
+fn WgpuBindGroupLayoutAddRef(bindGroupLayout: WGPUBindGroupLayout) {
+	unsafe { cpp.wgpuBindGroupLayoutAddRef(bindGroupLayout) }
+}
+fn WgpuPipelineLayoutAddRef(pipelineLayout: WGPUPipelineLayout) {
+	unsafe { cpp.wgpuPipelineLayoutAddRef(pipelineLayout) }
+}
+fn WgpuCommandEncoderRelease(commandBuffer: WGPUCommandEncoder) {
+	unsafe { cpp.wgpuCommandEncoderRelease(commandBuffer) }
+}
+fn WgpuCommandBufferRelease(commandBuffer: WGPUCommandBuffer) {
+	unsafe { cpp.wgpuCommandBufferRelease(commandBuffer) }
+}
+fn WgpuInstanceRelease(instance: WGPUInstance) {
+	unsafe { cpp.wgpuInstanceRelease(instance) }
+}
+fn WgpuAdapterRelease(adapter: WGPUAdapter) {
+	unsafe { cpp.wgpuAdapterRelease(adapter) }
+}
+fn WgpuDeviceRelease(device: WGPUDevice) {
+	unsafe { cpp.wgpuDeviceRelease(device) }
+}
+fn WgpuQueueRelease(device: WGPUQueue) {
+	unsafe { cpp.wgpuQueueRelease(device) }
+}
+fn WgpuComputePassEncoderRelease(rpenc: WGPUComputePassEncoder) {
+	unsafe { cpp.wgpuComputePassEncoderRelease(rpenc) }
+}
+fn WgpuComputePipelineRelease(pipeline: WGPUComputePipeline) {
+	unsafe { cpp.wgpuComputePipelineRelease(pipeline) }
+}
+fn WgpuRenderPipelineRelease(pipeline: WGPURenderPipeline) {
+	unsafe { cpp.wgpuRenderPipelineRelease(pipeline) }
+}
+fn WgpuBufferRelease(buffer: WGPUBuffer) {
+	unsafe { cpp.wgpuBufferRelease(buffer) }
+}
+fn WgpuBindGroupRelease(commandBuffer: WGPUBindGroup) {
+	unsafe { cpp.wgpuBindGroupRelease(commandBuffer) }
+}
+fn WgpuBindGroupLayoutRelease(commandBuffer: WGPUBindGroupLayout) {
+	unsafe { cpp.wgpuBindGroupLayoutRelease(commandBuffer) }
+}
+
+fn WgpuPipelineLayoutRelease(layout: WGPUPipelineLayout) {
+	unsafe { cpp.wgpuPipelineLayoutRelease(layout) }
+}
+fn WgpuTextureRelease(texture: WGPUTexture) {
+	unsafe { cpp.wgpuTextureRelease(texture) }
+}
+fn WgpuTextureViewRelease(view: WGPUTextureView) {
+	unsafe { cpp.wgpuTextureViewRelease(view) }
+}
+fn WgpuSamplerRelease(sampler: WGPUSampler) {
+	unsafe { cpp.wgpuSamplerRelease(sampler) }
+}
+fn WgpuShaderModuleRelease(module: WGPUShaderModule) {
+	unsafe { cpp.wgpuShaderModuleRelease(module) }
+}
+fn WgpuRenderPassEncoderRelease(rpenc: WGPURenderPassEncoder) {
+	unsafe { cpp.wgpuRenderPassEncoderRelease(rpenc) }
+}
