@@ -1,6 +1,6 @@
 cpp type char: byte
 type Char = cpp.char
-cpp type Void: uintptr
+cpp type Void: *unsafe
 type Void = cpp.Void
 
 unsafe fn StrToCharPtr(s: str): *Char {

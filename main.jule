@@ -95,7 +95,7 @@ fn main() {
 	let adapterCallback = wgvk::WGPURequestAdapterCallbackInfo{
 		mode: wgvk::WGPUCallbackMode.WGPUCallbackMode_WaitAnyOnly,
 		callback: adapterCallbackFunction,
-		userdata1: requestedAdapter,
+		userdata1: nil,
 	}
 
 	mut ctx := LoopContext{
