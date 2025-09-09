@@ -79,6 +79,22 @@ fn mainLoop(mut data: &LoopContext) {
 	wgvk::WgpuTextureViewRelease(surfaceView)
 }
 
+fn adapterCallbackFunction(
+	status: wgvk::WGPURequestAdapterStatus,
+	adapter: wgvk::WGPUAdapter,
+	label: wgvk::WGPUStringView,
+	mut userdata1: c::Void,
+	mut userdata2: c::Void) {
+	unsafe { userdata1 = (c::Void)(&adapter) }
+}
+fn deviceCallbackFunction(
+	status: wgvk::WGPURequestDeviceStatus,
+	device: wgvk::WGPUDevice,
+	message: wgvk::WGPUStringView,
+	mut userdata1: c::Void,
+	mut userdata2: c::Void) {
+	unsafe { userdata1 = (c::Void)(&device) }
+}
 fn main() {
 	let mut instanceFeatures: []wgvk::WGPUInstanceFeatureName = [
 		wgvk::WGPUInstanceFeatureName.WGPUInstanceFeatureName_TimedWaitAny,
@@ -90,13 +106,17 @@ fn main() {
 		requiredFeatureCount: 2,
 	}
 	let mut instance = wgvk::WgpuCreateInstance(&instanceDescriptor)
-	let mut adapterOptions = &wgvk::WGPURequestAdapterOptions{featureLevel: wgvk::WGPUFeatureLevel.WGPUFeatureLevel_Core}
+	let mut adapterOptions = wgvk::WGPURequestAdapterOptions{featureLevel: wgvk::WGPUFeatureLevel.WGPUFeatureLevel_Core}
 	let requestedAdapter: &wgvk::WGPUAdapter = nil
 	let adapterCallback = wgvk::WGPURequestAdapterCallbackInfo{
 		mode: wgvk::WGPUCallbackMode.WGPUCallbackMode_WaitAnyOnly,
 		callback: adapterCallbackFunction,
 		userdata1: nil,
 	}
+
+	let aFuture = wgvk::WgpuInstanceRequestAdapter(instance, &adapterOptions, adapterCallback)
+	let winfo = wgvk::WGPUFutureWaitInfo{future: aFuture, completed: 0}
+	let deviceLabel = wgvk::WGPUStringView{data: c::StrToCharPtr("1234"), length: 4}
 
 	mut ctx := LoopContext{
 		window: window,

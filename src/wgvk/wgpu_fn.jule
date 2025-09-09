@@ -1,4 +1,6 @@
 cpp fn wgpuCreateInstance(des: *WGPUInstanceDescriptor): WGPUInstance
+cpp fn wgpuInstanceWaitAny(instance: WGPUInstance, futureCount: size_t, futures: *WGPUFutureWaitInfo, timeoutNS: u64): WGPUWaitStatus
+
 cpp fn wgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture)
 cpp fn wgpuSurfaceConfigure(surface: WGPUSurface, config: *WGPUSurfaceConfiguration)
 cpp fn wgpuTextureCreateView(texture: WGPUTexture, descriptor: *WGPUTextureViewDescriptor): WGPUTextureView
@@ -66,6 +68,7 @@ cpp fn wgpuSamplerRelease(sampler: WGPUSampler)
 cpp fn wgpuShaderModuleRelease(module: WGPUShaderModule)
 
 cpp fn wgpuResetCommandBuffer(commandEncoder: WGPUCommandBuffer): WGPUCommandEncoder
+cpp fn wgpuInstanceRequestAdapter(instance: WGPUInstance, options: *WGPURequestAdapterOptions, callbackInfo: WGPURequestAdapterCallbackInfo): WGPUFuture
 
 //**********************************
 fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture) {
@@ -200,9 +203,19 @@ fn WgpuTextureViewRelease(view: WGPUTextureView) {
 fn WgpuSamplerRelease(sampler: WGPUSampler) {
 	unsafe { cpp.wgpuSamplerRelease(sampler) }
 }
+
 fn WgpuShaderModuleRelease(module: WGPUShaderModule) {
 	unsafe { cpp.wgpuShaderModuleRelease(module) }
 }
+
 fn WgpuRenderPassEncoderRelease(rpenc: WGPURenderPassEncoder) {
 	unsafe { cpp.wgpuRenderPassEncoderRelease(rpenc) }
+}
+
+fn WgpuInstanceRequestAdapter(instance: WGPUInstance, options: *WGPURequestAdapterOptions, callbackInfo: WGPURequestAdapterCallbackInfo): WGPUFuture {
+	ret unsafe { cpp.wgpuInstanceRequestAdapter(instance, options, callbackInfo) }
+}
+
+fn WgpuInstanceWaitAny(instance: WGPUInstance, futureCount: size_t, futures: *WGPUFutureWaitInfo, timeoutNS: u64): WGPUWaitStatus {
+	ret unsafe { cpp.wgpuInstanceWaitAny(instance, futureCount, futures, timeoutNS) }
 }

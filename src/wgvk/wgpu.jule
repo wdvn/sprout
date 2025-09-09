@@ -17,6 +17,7 @@ const WGPUTextureUsage_StorageAttachment: WGPUTextureUsage = 0x0000000000002000
 cpp type WGPUBool: u32
 type WGPUBool = cpp.WGPUBool
 cpp type Bool32: u32
+type Bool32 = cpp.Bool32
 
 #typedef
 cpp struct WGPUInstanceDescriptor {
@@ -57,12 +58,18 @@ cpp struct WGPURequestDeviceCallbackInfo{}
 type WGPURequestDeviceCallbackInfo = cpp.WGPURequestDeviceCallbackInfo
 
 #typedef
-cpp struct WGPUFutureWaitInfo{}
+cpp struct WGPUFutureWaitInfo {
+	future:    WGPUFuture
+	completed: Bool32
+}
 
 type WGPUFutureWaitInfo = cpp.WGPUFutureWaitInfo
 
 #typedef
-cpp struct WGPUStringView{}
+cpp struct WGPUStringView {
+	data:   *c::Char
+	length: size_t
+}
 
 type WGPUStringView = cpp.WGPUStringView
 
@@ -220,11 +227,6 @@ cpp struct WGPURenderPassColorAttachment {
 type WGPURenderPassColorAttachment = cpp.WGPURenderPassColorAttachment
 
 #typedef
-cpp struct WGPURequestAdapterCallback{}
-
-type WGPURequestAdapterCallback = cpp.WGPURequestAdapterCallback
-
-#typedef
 cpp struct WGPURenderPassDescriptor {
 	nextInChain:            WGPUChainedStruct
 	label:                  WGPUStringView
@@ -304,6 +306,9 @@ cpp struct WGPUCommandBufferDescriptor {
 	label:       WGPUStringView
 }
 
+cpp type WGPURequestAdapterCallback: fn(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView, mut c::Void, mut c::Void)
+cpp type WGPURequestDeviceCallback: fn(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, mut c::Void, mut c::Void)
+
 //************
 type WGPUTexelCopyBufferInfo = cpp.WGPUTexelCopyBufferInfo
 type WGPUTexelCopyBufferLayout = cpp.WGPUTexelCopyBufferLayout
@@ -311,3 +316,6 @@ type WGPUTexelCopyTextureInfo = cpp.WGPUTexelCopyTextureInfo
 type WGPUExtent3D = cpp.WGPUExtent3D
 type WGPUOrigin3D = cpp.WGPUOrigin3D
 type WGPUCommandBufferDescriptor = cpp.WGPUCommandBufferDescriptor
+
+type WGPURequestAdapterCallback = cpp.WGPURequestAdapterCallback
+type WGPURequestDeviceCallback = cpp.WGPURequestDeviceCallback
