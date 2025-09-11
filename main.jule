@@ -1,13 +1,23 @@
 #pass "-I./lib/wgvk/include/external"
 #pass "-I./lib/wgvk/include"
 #pass "-L./lib/wgvk/build/libwgvk.a"
+#pass "-I./lib/RGFW/include"
+#pass "-L./lib/RGFW/lib"
+#pass "-lRGFW"
+//TODO: compile with static lib
+//#pass "./lib/RGFW/lib/libRGFW.a"
+#pass "-lX11"
+#pass "-v"
+#pass "-L/usr/lib/x86_64-linux-gnu/libGL.so"
+#pass "-lGL"
 
 use "sprout/src/c"
 use "sprout/src/wgvk"
 use "std/fmt"
+use "sprout/src/rgfw"
 
 struct LoopContext {
-	window:       *wgvk::RGFW_window
+	window:       *rgfw::RGFW_Window
 	surface:      wgvk::WGPUSurface
 	device:       wgvk::WGPUDevice
 	queue:        wgvk::WGPUQueue
@@ -18,12 +28,12 @@ struct LoopContext {
 // make loop render
 fn mainLoop(mut data: &LoopContext) {
 	mut context := data
-	let mut event = wgvk::RGFW_event{}
-	for wgvk::RGFW_window_checkEvent(context.window, &event) == wgvk::RGFW_TRUE {
-		if event._type == wgvk::RGFW_quit {
+	let mut event = rgfw::RGFW_event{}
+	for rgfw::RGFW_window_checkEvent(context.window, &event) == rgfw::RGFW_TRUE {
+		if event._type == rgfw::RGFW_quit {
 			break
 		}
-		if event._type == wgvk::RGFW_mouseButtonPressed && event.button == wgvk::RGFW_mouseLeft {
+		if event._type == rgfw::RGFW_mouseButtonPressed && event.button == rgfw::RGFW_mouseButton.RGFW_mouseLeft {
 			fmt::Println("You clicked at x: %d, y: %d\n", event.point.x, event.point.y)
 		}
 	}
@@ -129,8 +139,8 @@ fn main() {
 	let requestDeviceFutureWaitInfo = wgvk::WGPUFutureWaitInfo{future: requestDeviceFuture, completed: 0}
 	wgvk::WgpuInstanceWaitAny(instance, 1, &requestDeviceFutureWaitInfo, 1000)
 	let queue = wgvk::WgpuDeviceGetQueue(device)
-	let winRec = wgvk::RGFW_rect{0, 0, 1280, 720}
-	let window = wgvk::RGFW_createWindow("RGFW with WebGPU", winRec, 0)
+	let winRec = rgfw::RGFW_rect{0, 0, 1280, 720}
+	let mut window = rgfw::RGFW_createWindow("RGFW with WebGPU", 0, 0, 1280, 720, 0)
 	let surface = wgvk::RGFW_window_createSurface_WebGPU(window, instance)
 	let mut width: int = 0
 	let mut height: int = 0

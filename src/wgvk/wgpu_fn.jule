@@ -1,3 +1,5 @@
+use "sprout/src/rgfw"
+
 cpp fn wgpuCreateInstance(des: *WGPUInstanceDescriptor): WGPUInstance
 cpp fn wgpuInstanceWaitAny(instance: WGPUInstance, futureCount: size_t, futures: *WGPUFutureWaitInfo, timeoutNS: u64): WGPUWaitStatus
 
@@ -73,6 +75,8 @@ cpp fn wgpuInstanceRequestAdapter(instance: WGPUInstance, options: *WGPURequestA
 cpp fn wgpuAdapterRequestDevice(adapter: WGPUAdapter, options: *WGPUDeviceDescriptor, callbackInfo: WGPURequestDeviceCallbackInfo): WGPUFuture
 cpp fn wgpuDeviceGetQueue(device: WGPUDevice): WGPUQueue
 
+
+cpp fn RGFW_window_createSurface_WebGPU(win: *rgfw::RGFW_window, instance:WGPUInstance):WGPUSurface
 //**********************************
 fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture) {
 	unsafe { cpp.wgpuSurfaceGetCurrentTexture(surface, texture) }
@@ -229,4 +233,8 @@ fn WgpuAdapterRequestDevice(adapter: WGPUAdapter, options: *WGPUDeviceDescriptor
 
 fn WgpuDeviceGetQueue(device: WGPUDevice): WGPUQueue {
 	ret unsafe { cpp.wgpuDeviceGetQueue(device) }
+}
+
+fn RGFW_window_createSurface_WebGPU(win: *rgfw::RGFW_window, instance:WGPUInstance):WGPUSurface{
+    ret unsafe { cpp.RGFW_window_createSurface_WebGPU(win, instance)}
 }
