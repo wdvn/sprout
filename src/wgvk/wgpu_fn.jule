@@ -70,6 +70,9 @@ cpp fn wgpuShaderModuleRelease(module: WGPUShaderModule)
 cpp fn wgpuResetCommandBuffer(commandEncoder: WGPUCommandBuffer): WGPUCommandEncoder
 cpp fn wgpuInstanceRequestAdapter(instance: WGPUInstance, options: *WGPURequestAdapterOptions, callbackInfo: WGPURequestAdapterCallbackInfo): WGPUFuture
 
+cpp fn wgpuAdapterRequestDevice(adapter: WGPUAdapter, options: *WGPUDeviceDescriptor, callbackInfo: WGPURequestDeviceCallbackInfo): WGPUFuture
+cpp fn wgpuDeviceGetQueue(device: WGPUDevice): WGPUQueue
+
 //**********************************
 fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture) {
 	unsafe { cpp.wgpuSurfaceGetCurrentTexture(surface, texture) }
@@ -218,4 +221,12 @@ fn WgpuInstanceRequestAdapter(instance: WGPUInstance, options: *WGPURequestAdapt
 
 fn WgpuInstanceWaitAny(instance: WGPUInstance, futureCount: size_t, futures: *WGPUFutureWaitInfo, timeoutNS: u64): WGPUWaitStatus {
 	ret unsafe { cpp.wgpuInstanceWaitAny(instance, futureCount, futures, timeoutNS) }
+}
+
+fn WgpuAdapterRequestDevice(adapter: WGPUAdapter, options: *WGPUDeviceDescriptor, callbackInfo: WGPURequestDeviceCallbackInfo): WGPUFuture {
+	ret unsafe { cpp.wgpuAdapterRequestDevice(adapter, options, callbackInfo) }
+}
+
+fn WgpuDeviceGetQueue(device: WGPUDevice): WGPUQueue {
+	ret unsafe { cpp.wgpuDeviceGetQueue(device) }
 }

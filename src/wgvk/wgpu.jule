@@ -53,7 +53,13 @@ cpp struct WGPURequestAdapterCallbackInfo {
 type WGPURequestAdapterCallbackInfo = cpp.WGPURequestAdapterCallbackInfo
 
 #typedef
-cpp struct WGPURequestDeviceCallbackInfo{}
+cpp struct WGPURequestDeviceCallbackInfo {
+	nextInChain: *WGPUChainedStruct
+	mode:        WGPUCallbackMode
+	callback:    WGPURequestDeviceCallback
+	userdata1:   c::Void
+	userdata2:   c::Void
+}
 
 type WGPURequestDeviceCallbackInfo = cpp.WGPURequestDeviceCallbackInfo
 
@@ -74,7 +80,16 @@ cpp struct WGPUStringView {
 type WGPUStringView = cpp.WGPUStringView
 
 #typedef
-cpp struct WGPUDeviceDescriptor{}
+cpp struct WGPUDeviceDescriptor {
+	nextInChain:                 *WGPUChainedStruct
+	label:                       WGPUStringView
+	requiredFeatureCount:        size_t
+	requiredFeatures:            *WGPUFeatureName
+	requiredLimits:              *WGPULimits
+	defaultQueue:                WGPUQueueDescriptor
+	deviceLostCallbackInfo:      WGPUDeviceLostCallbackInfo
+	uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
+}
 
 type WGPUDeviceDescriptor = cpp.WGPUDeviceDescriptor
 
@@ -306,8 +321,75 @@ cpp struct WGPUCommandBufferDescriptor {
 	label:       WGPUStringView
 }
 
+#typedef
+cpp struct WGPULimits {
+	nextInChain:                               *WGPUChainedStruct
+	maxTextureDimension1D:                     u32
+	maxTextureDimension2D:                     u32
+	maxTextureDimension3D:                     u32
+	maxTextureArrayLayers:                     u32
+	maxBindGroups:                             u32
+	maxBindGroupsPlusVertexBuffers:            u32
+	maxBindingsPerBindGroup:                   u32
+	maxDynamicUniformBuffersPerPipelineLayout: u32
+	maxDynamicStorageBuffersPerPipelineLayout: u32
+	maxSampledTexturesPerShaderStage:          u32
+	maxSamplersPerShaderStage:                 u32
+	maxStorageBuffersPerShaderStage:           u32
+	maxStorageTexturesPerShaderStage:          u32
+	maxUniformBuffersPerShaderStage:           u32
+	maxUniformBufferBindingSize:               u32
+	maxStorageBufferBindingSize:               u32
+	minUniformBufferOffsetAlignment:           u32
+	minStorageBufferOffsetAlignment:           u32
+	maxVertexBuffers:                          u32
+	maxBufferSize:                             u32
+	maxVertexAttributes:                       u32
+	maxVertexBufferArrayStride:                u32
+	maxInterStageShaderVariables:              u32
+	maxColorAttachments:                       u32
+	maxColorAttachmentBytesPerSample:          u32
+	maxComputeWorkgroupStorageSize:            u32
+	maxComputeInvocationsPerWorkgroup:         u32
+	maxComputeWorkgroupSizeX:                  u32
+	maxComputeWorkgroupSizeY:                  u32
+	maxComputeWorkgroupSizeZ:                  u32
+	maxComputeWorkgroupsPerDimension:          u32
+	maxStorageBuffersInVertexStage:            u32
+	maxStorageTexturesInVertexStage:           u32
+	maxStorageBuffersInFragmentStage:          u32
+	maxStorageTexturesInFragmentStage:         u32
+}
+
+#typedef
+cpp struct WGPUQueueDescriptor {
+	nextInChain: *WGPUChainedStruct
+	label:       WGPUStringView
+}
+
+#typedef
+cpp struct WGPUDeviceLostCallbackInfo {
+	nextInChain: *WGPUChainedStruct
+	mode:        int
+	callback:    WGPUDeviceLostCallback
+	userdata1:   c::Void
+	userdata2:   c::Void
+}
+
+#typedef
+cpp struct WGPUUncapturedErrorCallbackInfo {
+	nextInChain: *WGPUChainedStruct
+	callback:    WGPUUncapturedErrorCallback
+	userdata1:   c::Void
+	userdata2:   c::Void
+}
+
+//---------------------------------------------------
 cpp type WGPURequestAdapterCallback: fn(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView, mut c::Void, mut c::Void)
 cpp type WGPURequestDeviceCallback: fn(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, mut c::Void, mut c::Void)
+cpp type WGPUProc: fn()
+cpp type WGPUDeviceLostCallback: fn(*WGPUDevice, WGPUDeviceLostReason, WGPUStringView, c::Void, c::Void)
+cpp type WGPUUncapturedErrorCallback: fn(*WGPUDevice, WGPUErrorType, WGPUStringView, c::Void, c::Void)
 
 //************
 type WGPUTexelCopyBufferInfo = cpp.WGPUTexelCopyBufferInfo
@@ -316,6 +398,15 @@ type WGPUTexelCopyTextureInfo = cpp.WGPUTexelCopyTextureInfo
 type WGPUExtent3D = cpp.WGPUExtent3D
 type WGPUOrigin3D = cpp.WGPUOrigin3D
 type WGPUCommandBufferDescriptor = cpp.WGPUCommandBufferDescriptor
+type WGPULimits = cpp.WGPULimits
+type WGPUQueueDescriptor = cpp.WGPUQueueDescriptor
+type WGPUDeviceLostCallbackInfo = cpp.WGPUDeviceLostCallbackInfo
+type WGPUUncapturedErrorCallbackInfo = cpp.WGPUUncapturedErrorCallbackInfo
+
+//____________________________________
 
 type WGPURequestAdapterCallback = cpp.WGPURequestAdapterCallback
 type WGPURequestDeviceCallback = cpp.WGPURequestDeviceCallback
+type WGPUProc = cpp.WGPUProc
+type WGPUDeviceLostCallback = cpp.WGPUDeviceLostCallback
+type WGPUUncapturedErrorCallback = cpp.WGPUUncapturedErrorCallback

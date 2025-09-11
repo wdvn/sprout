@@ -1,7 +1,6 @@
 cpp type char: byte
 type Char = cpp.char
-cpp type Void: *unsafe
-type Void = cpp.Void
+type Void = *unsafe
 
 unsafe fn StrToCharPtr(s: str): *Char {
 	ret (*Char)(&s[0])
@@ -44,4 +43,8 @@ unsafe fn getLenCppChar(ch: *cpp.char): int {
 		out = i
 	}
 	ret out
+}
+
+unsafe fn CastToVoid(des: any): Void{
+    ret unsafe { (*unsafe)(uintptr(*(*&uintptr)(&des))) }
 }

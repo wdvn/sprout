@@ -285,3 +285,42 @@ enum WGPUWaitStatus {
 	WGPUWaitStatus_Error: 0x00000003,
 	WGPUWaitStatus_Force32: 0x7FFFFFFF,
 }
+
+enum WGPUFeatureName {
+	WGPUFeatureName_DepthClipControl: 0x00000001,
+	WGPUFeatureName_Depth32FloatStencil8: 0x00000002,
+	WGPUFeatureName_TimestampQuery: 0x00000003,
+	WGPUFeatureName_TextureCompressionBC: 0x00000004,
+	WGPUFeatureName_TextureCompressionBCSliced3D: 0x00000005,
+	WGPUFeatureName_TextureCompressionETC2: 0x00000006,
+	WGPUFeatureName_TextureCompressionASTC: 0x00000007,
+	WGPUFeatureName_TextureCompressionASTCSliced3D: 0x00000008,
+	WGPUFeatureName_IndirectFirstInstance: 0x00000009,
+	WGPUFeatureName_ShaderF16: 0x0000000A,
+	WGPUFeatureName_RG11B10UfloatRenderable: 0x0000000B,
+	WGPUFeatureName_BGRA8UnormStorage: 0x0000000C,
+	WGPUFeatureName_Float32Filterable: 0x0000000D,
+	WGPUFeatureName_Float32Blendable: 0x0000000E,
+	WGPUFeatureName_ClipDistances: 0x0000000F,
+	WGPUFeatureName_DualSourceBlending: 0x00000010,
+	WGPUFeatureName_Subgroups: 0x00000011,
+	WGPUFeatureName_CoreFeaturesAndLimits: 0x00000012,
+	WGPUFeatureName_Force32: 0x7FFFFFFF,
+}
+
+enum WGPUDeviceLostReason {
+	WGPUDeviceLostReason_Unknown: 0x00000001,
+	WGPUDeviceLostReason_Destroyed: 0x00000002,
+	WGPUDeviceLostReason_CallbackCancelled: 0x00000003,
+	WGPUDeviceLostReason_FailedCreation: 0x00000004,
+	WGPUDeviceLostReason_Force32: 0x7FFFFFFF,
+}
+
+enum WGPUErrorType {
+	WGPUErrorType_NoError: 0x00000001,
+	WGPUErrorType_Validation: 0x00000002,
+	WGPUErrorType_OutOfMemory: 0x00000003,
+	WGPUErrorType_Internal: 0x00000004,
+	WGPUErrorType_Unknown: 0x00000005,
+	WGPUErrorType_Force32: 0x7FFFFFFF,
+}
