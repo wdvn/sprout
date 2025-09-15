@@ -94,12 +94,25 @@ cpp struct WGPUDeviceDescriptor {
 type WGPUDeviceDescriptor = cpp.WGPUDeviceDescriptor
 
 #typedef
-cpp struct WGPUSurfaceCapabilities{}
+cpp struct WGPUSurfaceCapabilities {
+	nextInChain:      *WGPUChainedStruct
+	usages:           WGPUTextureUsage
+	formatCount:      size_t
+	formats:          *WGPUTextureFormat
+	presentModeCount: size_t
+	presentModes:     *WGPUPresentMode
+	alphaModeCount:   size_t
+	alphaModes:       *WGPUCompositeAlphaMode
+}
 
 type WGPUSurfaceCapabilities = cpp.WGPUSurfaceCapabilities
 
 #typedef
-cpp struct WGPUShaderSourceSPIRV{}
+cpp struct WGPUShaderSourceSPIRV{
+     chain:WGPUChainedStruct
+     codeSize: u32
+     code: u32
+}
 
 type WGPUShaderSourceSPIRV = cpp.WGPUShaderSourceSPIRV
 
@@ -384,6 +397,12 @@ cpp struct WGPUUncapturedErrorCallbackInfo {
 	userdata2:   c::Void
 }
 
+#typedef
+cpp struct WGPUShaderSourceWGSL {
+     chain:WGPUChainedStruct
+     code:WGPUStringView
+}
+
 //---------------------------------------------------
 cpp type WGPURequestAdapterCallback: fn(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView, mut c::Void, mut c::Void)
 cpp type WGPURequestDeviceCallback: fn(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, mut c::Void, mut c::Void)
@@ -402,6 +421,9 @@ type WGPULimits = cpp.WGPULimits
 type WGPUQueueDescriptor = cpp.WGPUQueueDescriptor
 type WGPUDeviceLostCallbackInfo = cpp.WGPUDeviceLostCallbackInfo
 type WGPUUncapturedErrorCallbackInfo = cpp.WGPUUncapturedErrorCallbackInfo
+type WGPUShaderSourceWGSL = cpp.WGPUShaderSourceWGSL
+
+
 
 //____________________________________
 

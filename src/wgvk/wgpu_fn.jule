@@ -74,9 +74,12 @@ cpp fn wgpuInstanceRequestAdapter(instance: WGPUInstance, options: *WGPURequestA
 
 cpp fn wgpuAdapterRequestDevice(adapter: WGPUAdapter, options: *WGPUDeviceDescriptor, callbackInfo: WGPURequestDeviceCallbackInfo): WGPUFuture
 cpp fn wgpuDeviceGetQueue(device: WGPUDevice): WGPUQueue
+cpp fn  wgpuSurfaceGetCapabilities( wgpuSurface:WGPUSurface,  adapter:WGPUAdapter, capabilities:* WGPUSurfaceCapabilities)
 
 
-cpp fn RGFW_window_createSurface_WebGPU(win: *rgfw::RGFW_window, instance:WGPUInstance):WGPUSurface
+cpp fn RGFW_window_createSurface_WebGPU(win: *rgfw::RGFW_window, instance: WGPUInstance): WGPUSurface
+
+
 //**********************************
 fn WgpuSurfaceGetCurrentTexture(surface: WGPUSurface, texture: *WGPUSurfaceTexture) {
 	unsafe { cpp.wgpuSurfaceGetCurrentTexture(surface, texture) }
@@ -235,6 +238,10 @@ fn WgpuDeviceGetQueue(device: WGPUDevice): WGPUQueue {
 	ret unsafe { cpp.wgpuDeviceGetQueue(device) }
 }
 
-fn RGFW_window_createSurface_WebGPU(win: *rgfw::RGFW_window, instance:WGPUInstance):WGPUSurface{
-    ret unsafe { cpp.RGFW_window_createSurface_WebGPU(win, instance)}
+fn RGFW_window_createSurface_WebGPU(win: *rgfw::RGFW_window, instance: WGPUInstance): WGPUSurface {
+	ret unsafe { cpp.RGFW_window_createSurface_WebGPU(win, instance) }
+}
+
+fn WgpuSurfaceGetCapabilities( wgpuSurface:WGPUSurface,  adapter:WGPUAdapter, capabilities:* WGPUSurfaceCapabilities){
+     unsafe{cpp.wgpuSurfaceGetCapabilities(wgpuSurface,adapter,capabilities)}
 }

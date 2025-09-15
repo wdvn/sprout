@@ -12,9 +12,10 @@
 #pass "-lGL"
 
 use "sprout/src/c"
+use "sprout/src/rgfw"
 use "sprout/src/wgvk"
 use "std/fmt"
-use "sprout/src/rgfw"
+use "std/mem"
 
 struct LoopContext {
 	window:       *rgfw::RGFW_Window
@@ -24,6 +25,26 @@ struct LoopContext {
 	vertexBuffer: wgvk::WGPUBuffer
 	rp:           wgvk::WGPURenderPipeline
 }
+
+const simpleShaderWGSL: str = `
+struct VertexInput {
+    @location(0) position: vec2f
+};
+struct VertexOutput {
+    @builtin(position) position: vec4f
+};
+@vertex
+fn vs_main(in: VertexInput) -> VertexOutput {
+    var out: VertexOutput;
+    out.position = vec4f(in.position.x, in.position.y, 0.0f, 1.0f);
+    return out;
+}
+
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4f {
+    return vec4f(1,0,0,1);
+}
+`
 
 // make loop render
 fn mainLoop(mut data: &LoopContext) {
@@ -142,9 +163,31 @@ fn main() {
 	let winRec = rgfw::RGFW_rect{0, 0, 1280, 720}
 	let mut window = rgfw::RGFW_createWindow("RGFW with WebGPU", 0, 0, 1280, 720, 0)
 	let surface = wgvk::RGFW_window_createSurface_WebGPU(window, instance)
-	let mut width: int = 0
-	let mut height: int = 0
+	let mut width: u32 = 0
+	let mut height: u32 = 0
 
+	let mut caps = wgvk::WGPUSurfaceCapabilities{}
+	wgvk::WgpuSurfaceGetCapabilities(surface, requestedAdapter, &caps)
+	let desiredPresentMode = wgvk::WGPUPresentMode.WGPUPresentMode_Fifo
+
+	let surfaceConfig = wgvk::WGPUSurfaceConfiguration{
+		alphaMode: wgvk::WGPUCompositeAlphaMode.WGPUCompositeAlphaMode_Opaque,
+		presentMode: desiredPresentMode,
+		usage: wgvk::WGPUTextureUsage_RenderAttachment,
+		device: device,
+		format: wgvk::WGPUTextureFormat.WGPUTextureFormat_BGRA8Unorm,
+		width: width,
+		height: height,
+	}
+	wgvk::WgpuSurfaceConfigure(surface, &surfaceConfig)
+	let shaderSource = wgvk::WGPUShaderSourceWGSL{
+		chain: wgvk::WGPUChainedStruct{
+			sType: wgvk::WGPUSType.WGPUSType_ShaderSourceWGSL,
+		},
+		code: wgvk::WGPUStringView{data: unsafe { c::StrToCharPtr(simpleShaderWGSL) }, length: (u32)(mem::SizeOf(simpleShaderWGSL) - 1)},
+	}
+	let shaderModuleDesc = wgvk::WGPUShaderSourceSPIRV{chain: &shader}
+	let shaderModule = wgvk::WgpuDeviceCreateShaderModule(device, &shaderModuleDesc)
 	mut ctx := LoopContext{
 		window: window,
 		surface: surface,
