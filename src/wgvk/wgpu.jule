@@ -154,12 +154,25 @@ cpp struct WGPUBlendState {
 type WGPUBlendState = cpp.WGPUBlendState
 
 #typedef
-cpp struct WGPUColorTargetState{}
+cpp struct WGPUColorTargetState {
+	nextInChain: *WGPUChainedStruct
+	format:      WGPUTextureFormat
+	blend:       *WGPUBlendState
+	writeMask:   WGPUColorWriteMask
+}
 
 type WGPUColorTargetState = cpp.WGPUColorTargetState
 
 #typedef
-cpp struct WGPUFragmentState{}
+cpp struct WGPUFragmentState {
+	nextInChain:   *WGPUChainedStruct
+	module:        WGPUShaderModule
+	entryPoint:    WGPUStringView
+	constantCount: size_t
+	constants:     *WGPUConstantEntry
+	targetCount:   size_t
+	targets:       *WGPUColorTargetState
+}
 
 type WGPUFragmentState = cpp.WGPUFragmentState
 
@@ -169,12 +182,27 @@ cpp struct WGPUPipelineLayoutDescriptor{}
 type WGPUPipelineLayoutDescriptor = cpp.WGPUPipelineLayoutDescriptor
 
 #typedef
-cpp struct WGPURenderPipelineDescriptor{}
+cpp struct WGPURenderPipelineDescriptor {
+	nextInChain:  *WGPUChainedStruct
+	label:        WGPUStringView
+	layout:       WGPUPipelineLayout
+	vertex:       WGPUVertexState
+	primitive:    WGPUPrimitiveState
+	depthStencil: *WGPUDepthStencilState
+	multisample:  WGPUMultisampleState
+	fragment:     *WGPUFragmentState
+}
 
 type WGPURenderPipelineDescriptor = cpp.WGPURenderPipelineDescriptor
 
 #typedef
-cpp struct WGPUBufferDescriptor{}
+cpp struct WGPUBufferDescriptor{
+nextInChain:*WGPUChainedStruct
+ label:    WGPUStringView
+ usage:    WGPUBufferUsage
+ size:    uint64_t
+ mappedAtCreation:    WGPUBool
+}
 
 type WGPUBufferDescriptor = cpp.WGPUBufferDescriptor
 
@@ -422,9 +450,70 @@ cpp struct WGPUShaderSourceWGSL {
 
 #typedef
 cpp struct WGPUBlendComponent {
-	operation: u32//WGPUBlendOperation
+	operation: u32 //WGPUBlendOperation
 	srcFactor: u32 //WGPUBlendFactor
 	dstFactor: u32 //WGPUBlendFactor
+}
+
+#typedef
+cpp struct WGPUConstantEntry {
+	nextInChain: *WGPUChainedStruct
+	key:         WGPUStringView
+	value:       f64
+}
+
+#typedef
+cpp struct WGPUVertexState {
+	nextInChain:   *WGPUChainedStruct
+	module:        WGPUShaderModule
+	entryPoint:    WGPUStringView
+	constantCount: size_t
+	constants:     *WGPUConstantEntry
+	bufferCount:   size_t
+	buffers:       *WGPUVertexBufferLayout
+}
+
+#typedef
+cpp struct WGPUPrimitiveState {
+	nextInChain:      *WGPUChainedStruct
+	topology:         WGPUPrimitiveTopology
+	stripIndexFormat: WGPUIndexFormat
+	frontFace:        WGPUFrontFace
+	cullMode:         WGPUCullMode
+	unclippedDepth:   Bool32
+}
+
+#typedef
+cpp struct WGPUDepthStencilState {
+	nextInChain: *WGPUChainedStruct
+
+	format:              WGPUTextureFormat
+	depthWriteEnabled:   Bool32
+	depthCompare:        WGPUCompareFunction
+	stencilFront:        WGPUStencilFaceState
+	stencilBack:         WGPUStencilFaceState
+	stencilReadMask:     uint32_t
+	stencilWriteMask:    uint32_t
+	depthBias:           int32_t
+	depthBiasSlopeScale: float
+	depthBiasClamp:      float
+}
+
+#typedef
+cpp struct WGPUMultisampleState {
+	nextInChain: *WGPUChainedStruct
+
+	count:                  uint32_t
+	mask:                   uint32_t
+	alphaToCoverageEnabled: Bool32
+}
+
+#typedef
+cpp struct WGPUStencilFaceState {
+	compare:     WGPUCompareFunction
+	failOp:      WGPUStencilOperation
+	depthFailOp: WGPUStencilOperation
+	passOp:      WGPUStencilOperation
 }
 
 //---------------------------------------------------
@@ -447,6 +536,12 @@ type WGPUDeviceLostCallbackInfo = cpp.WGPUDeviceLostCallbackInfo
 type WGPUUncapturedErrorCallbackInfo = cpp.WGPUUncapturedErrorCallbackInfo
 type WGPUShaderSourceWGSL = cpp.WGPUShaderSourceWGSL
 type WGPUBlendComponent = cpp.WGPUBlendComponent
+type WGPUConstantEntry = cpp.WGPUConstantEntry
+type WGPUVertexState = cpp.WGPUVertexState
+type WGPUPrimitiveState = cpp.WGPUPrimitiveState
+type WGPUDepthStencilState = cpp.WGPUDepthStencilState
+type WGPUMultisampleState = cpp.WGPUMultisampleState
+type WGPUStencilFaceState = cpp.WGPUStencilFaceState
 
 //____________________________________
 
@@ -454,4 +549,4 @@ type WGPURequestAdapterCallback = cpp.WGPURequestAdapterCallback
 type WGPURequestDeviceCallback = cpp.WGPURequestDeviceCallback
 type WGPUProc = cpp.WGPUProc
 type WGPUDeviceLostCallback = cpp.WGPUDeviceLostCallback
-type WGPUUncapturedErrorCallback = cpp.WGPUUncapturedErrorCallback
+type WGPUUncapturedErrorCallback = cpp.WGPUUncapturedErrorCallback              

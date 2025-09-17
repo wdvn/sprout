@@ -147,7 +147,7 @@ fn main() {
 
 	let aFuture = wgvk::WgpuInstanceRequestAdapter(instance, &adapterOptions, adapterCallback)
 	let winfo = wgvk::WGPUFutureWaitInfo{future: aFuture, completed: 0}
-	let deviceLabel = wgvk::NewWGPUStringView("1234", 4)
+	let deviceLabel = wgvk::NewWGPUStringView("1234")
 	let deviceDescriptor = wgvk::WGPUDeviceDescriptor{label: deviceLabel}
 
 	let mut device: wgvk::WGPUDevice = wgvk::WGPUDevice{}
@@ -214,6 +214,57 @@ fn main() {
 			dstFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
 		},
 	}
+	let colorTargetState = wgvk::WGPUColorTargetState{
+		writeMask: wgvk::WGPUColorWriteMask_All,
+		format: wgvk::WGPUTextureFormat.WGPUTextureFormat_BGRA8Unorm,
+		blend: nil,
+	}
+	let fragmentState = wgvk::WGPUFragmentState{
+		entryPoint: wgvk::NewWGPUStringView("fs_main"),
+		module: shaderModule,
+		targetCount: 1,
+		targets: &colorTargetState,
+	}
+	let pldesc = wgvk::WGPUPipelineLayoutDescriptor{}
+	let pllayout = wgvk::WgpuDeviceCreatePipelineLayout(device, &pldesc)
+
+	let rpdesc = wgvk::WGPURenderPipelineDescriptor{
+		vertex: wgvk::WGPUVertexState{
+			bufferCount: 1,
+			buffers: &vbLayout,
+			module: shaderModule,
+			entryPoint: wgvk::NewWGPUStringView("vs_main"),
+		},
+		fragment: &fragmentState,
+		primitive: wgvk::WGPUPrimitiveState{
+			cullMode: wgvk::WGPUCullMode.WGPUCullMode_None,
+			frontFace: wgvk::WGPUFrontFace.WGPUFrontFace_CCW,
+			topology: wgvk::WGPUPrimitiveTopology.WGPUPrimitiveTopology_TriangleList,
+		},
+		layout: pllayout,
+		multisample: wgvk::WGPUMultisampleState{
+			count: 1,
+			mask: 0xffffffff,
+		},
+	}
+	let rp = wgvk::WgpuDeviceCreateRenderPipeline(device, &rpdesc)
+	let scale: f32 = 0.2
+	let vertices: []f32 = [-scale, -scale, -scale, scale, scale, scale]
+
+	let bufferDescriptor = wgvk::WGPUBufferDescriptor{
+		size: (wgvk::uint64_t)(mem::SizeOf(vertices)),
+		usage: wgvk::WGPUBufferUsage_Vertex | wgvk::WGPUBufferUsage_CopyDst,
+	}
+	let vertexBuffer = wgvk::WgpuDeviceCreateBuffer(device, &bufferDescriptor)
+	wgvk::WgpuQueueWriteBuffer(queue, vertexBuffer, 0, vertices, mem::SizeOf(vertices))
+
+	let rbEncDesc = wgvk::WGPURenderBundleEncoderDescriptor{
+		colorFormatCount: 1,
+		colorFormats: &colorTargetState.format,
+		depthStencilFormat: wgvk::WGPUTextureFormat.WGPUTextureFormat_Undefined,
+		sampleCount: 1,
+	}
+
 	mut ctx := LoopContext{
 		window: window,
 		surface: surface,
