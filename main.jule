@@ -186,8 +186,34 @@ fn main() {
 		},
 		code: wgvk::WGPUStringView{data: unsafe { c::StrToCharPtr(simpleShaderWGSL) }, length: (u32)(mem::SizeOf(simpleShaderWGSL) - 1)},
 	}
-	let shaderModuleDesc = wgvk::WGPUShaderSourceSPIRV{chain: &shader}
+	let shaderModuleDesc = wgvk::WGPUShaderModuleDescriptor{nextInChain: &shaderSource.chain}
 	let shaderModule = wgvk::WgpuDeviceCreateShaderModule(device, &shaderModuleDesc)
+
+	let vbAttribute = wgvk::WGPUVertexAttribute{
+		nextInChain: nil,
+		shaderLocation: 0,
+		format: wgvk::WGPUVertexFormat.WGPUVertexFormat_Float32x2,
+		offset: 0,
+	}
+	let vbLayout = wgvk::WGPUVertexBufferLayout{
+		nextInChain: nil,
+		arrayStride: (u64)(mem::SizeOf((f32)(0)) * 2),
+		attributeCount: 1,
+		attributes: &vbAttribute,
+		stepMode: wgvk::WGPUVertexStepMode.WGPUVertexStepMode_Vertex,
+	}
+	let blendState = wgvk::WGPUBlendState{
+		alpha: wgvk::WGPUBlendComponent{
+			operation: wgvk::WGPUBlendOperation.WGPUBlendOperation_Add,
+			srcFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
+			dstFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
+		},
+		color: wgvk::WGPUBlendComponent{
+			operation: wgvk::WGPUBlendOperation.WGPUBlendOperation_Add,
+			srcFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
+			dstFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
+		},
+	}
 	mut ctx := LoopContext{
 		window: window,
 		surface: surface,

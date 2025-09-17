@@ -108,31 +108,48 @@ cpp struct WGPUSurfaceCapabilities {
 type WGPUSurfaceCapabilities = cpp.WGPUSurfaceCapabilities
 
 #typedef
-cpp struct WGPUShaderSourceSPIRV{
-     chain:WGPUChainedStruct
-     codeSize: u32
-     code: u32
+cpp struct WGPUShaderSourceSPIRV {
+	chain:    WGPUChainedStruct
+	codeSize: u32
+	code:     u32
 }
 
 type WGPUShaderSourceSPIRV = cpp.WGPUShaderSourceSPIRV
 
 #typedef
-cpp struct WGPUShaderModuleDescriptor{}
+cpp struct WGPUShaderModuleDescriptor {
+	nextInChain: *WGPUChainedStruct
+	label:       WGPUStringView
+}
 
 type WGPUShaderModuleDescriptor = cpp.WGPUShaderModuleDescriptor
 
 #typedef
-cpp struct WGPUVertexAttribute{}
+cpp struct WGPUVertexAttribute {
+	nextInChain:    *WGPUChainedStruct
+	format:         WGPUVertexFormat
+	offset:         u64
+	shaderLocation: u32
+}
 
 type WGPUVertexAttribute = cpp.WGPUVertexAttribute
 
 #typedef
-cpp struct WGPUVertexBufferLayout{}
+cpp struct WGPUVertexBufferLayout {
+	nextInChain:    *WGPUChainedStruct
+	stepMode:       WGPUVertexStepMode
+	arrayStride:    u64
+	attributeCount: u32
+	attributes:     *WGPUVertexAttribute
+}
 
 type WGPUVertexBufferLayout = cpp.WGPUVertexBufferLayout
 
 #typedef
-cpp struct WGPUBlendState{}
+cpp struct WGPUBlendState {
+	color: WGPUBlendComponent
+	alpha: WGPUBlendComponent
+}
 
 type WGPUBlendState = cpp.WGPUBlendState
 
@@ -399,8 +416,15 @@ cpp struct WGPUUncapturedErrorCallbackInfo {
 
 #typedef
 cpp struct WGPUShaderSourceWGSL {
-     chain:WGPUChainedStruct
-     code:WGPUStringView
+	chain: WGPUChainedStruct
+	code:  WGPUStringView
+}
+
+#typedef
+cpp struct WGPUBlendComponent {
+	operation: u32//WGPUBlendOperation
+	srcFactor: u32 //WGPUBlendFactor
+	dstFactor: u32 //WGPUBlendFactor
 }
 
 //---------------------------------------------------
@@ -422,8 +446,7 @@ type WGPUQueueDescriptor = cpp.WGPUQueueDescriptor
 type WGPUDeviceLostCallbackInfo = cpp.WGPUDeviceLostCallbackInfo
 type WGPUUncapturedErrorCallbackInfo = cpp.WGPUUncapturedErrorCallbackInfo
 type WGPUShaderSourceWGSL = cpp.WGPUShaderSourceWGSL
-
-
+type WGPUBlendComponent = cpp.WGPUBlendComponent
 
 //____________________________________
 

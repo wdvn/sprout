@@ -1,2 +1,2 @@
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./lib/RGFW/lib
-./main
+./sprout
