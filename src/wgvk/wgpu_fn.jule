@@ -1,3 +1,4 @@
+use "sprout/src/c"
 use "sprout/src/rgfw"
 
 cpp fn wgpuCreateInstance(des: *WGPUInstanceDescriptor): WGPUInstance
@@ -77,9 +78,9 @@ cpp fn wgpuDeviceGetQueue(device: WGPUDevice): WGPUQueue
 cpp fn wgpuSurfaceGetCapabilities(wgpuSurface: WGPUSurface, adapter: WGPUAdapter, capabilities: *WGPUSurfaceCapabilities)
 cpp fn wgpuDeviceCreateShaderModule(device: WGPUDevice, descriptor: *WGPUShaderModuleDescriptor): WGPUShaderModule
 cpp fn wgpuDeviceCreatePipelineLayout(device: WGPUDevice, pldesc: *WGPUPipelineLayoutDescriptor): WGPUPipelineLayout
-cpp fn wgpuDeviceCreateRenderPipeline(device:WGPUDevice , descriptor:*WGPURenderPipelineDescriptor):WGPURenderPipeline
-
-
+cpp fn wgpuDeviceCreateRenderPipeline(device: WGPUDevice, descriptor: *WGPURenderPipelineDescriptor): WGPURenderPipeline
+cpp fn wgpuDeviceCreateBuffer(device: WGPUDevice, desc: *WGPUBufferDescriptor): WGPUBuffer
+cpp fn wgpuQueueWriteBuffer(cSelf: WGPUQueue, buffer: WGPUBuffer, bufferOffset: uint64_t, data: c::Void, size: size_t)
 
 cpp fn RGFW_window_createSurface_WebGPU(win: *rgfw::RGFW_window, instance: WGPUInstance): WGPUSurface
 
@@ -257,6 +258,15 @@ fn WgpuDeviceCreatePipelineLayout(device: WGPUDevice, pldesc: *WGPUPipelineLayou
 	ret unsafe { cpp.wgpuDeviceCreatePipelineLayout(device, pldesc) }
 }
 
-fn WgpuDeviceCreateRenderPipeline(device:WGPUDevice , descriptor:*WGPURenderPipelineDescriptor):WGPURenderPipeline{
-    ret unsafe{cpp.wgpuDeviceCreateRenderPipeline(device,descriptor)}
+fn WgpuDeviceCreateRenderPipeline(device: WGPUDevice, descriptor: *WGPURenderPipelineDescriptor): WGPURenderPipeline {
+	ret unsafe { cpp.wgpuDeviceCreateRenderPipeline(device, descriptor) }
+}
+
+fn WgpuDeviceCreateBuffer(device: WGPUDevice, desc: *WGPUBufferDescriptor): WGPUBuffer {
+	ret unsafe { cpp.wgpuDeviceCreateBuffer(device, desc) }
+}
+
+fn WgpuQueueWriteBuffer(cSelf: WGPUQueue, buffer: WGPUBuffer, bufferOffset: uint64_t, data: any, size: size_t) {
+	let raw = unsafe { c::CastToVoid(data) }
+	unsafe { cpp.wgpuQueueWriteBuffer(cSelf, buffer, bufferOffset, raw, size) }
 }

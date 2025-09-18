@@ -137,16 +137,16 @@ fn main() {
 		requiredFeatureCount: 2,
 	}
 	let mut instance = wgvk::WgpuCreateInstance(&instanceDescriptor)
-	let mut adapterOptions = wgvk::WGPURequestAdapterOptions{featureLevel: wgvk::WGPUFeatureLevel.WGPUFeatureLevel_Core}
+	//let mut adapterOptions = wgvk::WGPURequestAdapterOptions{featureLevel: wgvk::WGPUFeatureLevel.WGPUFeatureLevel_Core}
 	let requestedAdapter: wgvk::WGPUAdapter = wgvk::WGPUAdapter{}
-	let adapterCallback = wgvk::WGPURequestAdapterCallbackInfo{
+	/*let adapterCallback = wgvk::WGPURequestAdapterCallbackInfo{
 		mode: wgvk::WGPUCallbackMode.WGPUCallbackMode_WaitAnyOnly,
 		callback: adapterCallbackFunction,
 		userdata1: unsafe { c::CastToVoid(requestedAdapter) },
-	}
+	}*/
 
-	let aFuture = wgvk::WgpuInstanceRequestAdapter(instance, &adapterOptions, adapterCallback)
-	let winfo = wgvk::WGPUFutureWaitInfo{future: aFuture, completed: 0}
+	//let aFuture = wgvk::WgpuInstanceRequestAdapter(instance, &adapterOptions, adapterCallback)
+	//let winfo = wgvk::WGPUFutureWaitInfo{future: aFuture, completed: 0}
 	let deviceLabel = wgvk::NewWGPUStringView("1234")
 	let deviceDescriptor = wgvk::WGPUDeviceDescriptor{label: deviceLabel}
 
@@ -160,7 +160,7 @@ fn main() {
 	let requestDeviceFutureWaitInfo = wgvk::WGPUFutureWaitInfo{future: requestDeviceFuture, completed: 0}
 	wgvk::WgpuInstanceWaitAny(instance, 1, &requestDeviceFutureWaitInfo, 1000)
 	let queue = wgvk::WgpuDeviceGetQueue(device)
-	let winRec = rgfw::RGFW_rect{0, 0, 1280, 720}
+	//let winRec = rgfw::RGFW_rect{0, 0, 1280, 720}
 	let mut window = rgfw::RGFW_createWindow("RGFW with WebGPU", 0, 0, 1280, 720, 0)
 	let surface = wgvk::RGFW_window_createSurface_WebGPU(window, instance)
 	let mut width: u32 = 0
@@ -202,7 +202,7 @@ fn main() {
 		attributes: &vbAttribute,
 		stepMode: wgvk::WGPUVertexStepMode.WGPUVertexStepMode_Vertex,
 	}
-	let blendState = wgvk::WGPUBlendState{
+	/*let blendState = wgvk::WGPUBlendState{
 		alpha: wgvk::WGPUBlendComponent{
 			operation: wgvk::WGPUBlendOperation.WGPUBlendOperation_Add,
 			srcFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
@@ -213,7 +213,7 @@ fn main() {
 			srcFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
 			dstFactor: wgvk::WGPUBlendFactor.WGPUBlendFactor_One,
 		},
-	}
+	}*/
 	let colorTargetState = wgvk::WGPUColorTargetState{
 		writeMask: wgvk::WGPUColorWriteMask_All,
 		format: wgvk::WGPUTextureFormat.WGPUTextureFormat_BGRA8Unorm,
@@ -252,20 +252,20 @@ fn main() {
 	let vertices: []f32 = [-scale, -scale, -scale, scale, scale, scale]
 
 	let bufferDescriptor = wgvk::WGPUBufferDescriptor{
-		size: (wgvk::uint64_t)(mem::SizeOf(vertices)),
+		size: (u64)(mem::SizeOf(vertices)),
 		usage: wgvk::WGPUBufferUsage_Vertex | wgvk::WGPUBufferUsage_CopyDst,
 	}
 	let vertexBuffer = wgvk::WgpuDeviceCreateBuffer(device, &bufferDescriptor)
-	wgvk::WgpuQueueWriteBuffer(queue, vertexBuffer, 0, vertices, mem::SizeOf(vertices))
+	wgvk::WgpuQueueWriteBuffer(queue, vertexBuffer, 0, vertices, (u32)(mem::SizeOf(vertices)))
 
-	let rbEncDesc = wgvk::WGPURenderBundleEncoderDescriptor{
+	/*let rbEncDesc = wgvk::WGPURenderBundleEncoderDescriptor{
 		colorFormatCount: 1,
 		colorFormats: &colorTargetState.format,
 		depthStencilFormat: wgvk::WGPUTextureFormat.WGPUTextureFormat_Undefined,
 		sampleCount: 1,
 	}
-
-	mut ctx := LoopContext{
+	*/
+	mut ctx := &LoopContext{
 		window: window,
 		surface: surface,
 		device: device,
@@ -273,6 +273,8 @@ fn main() {
 		vertexBuffer: vertexBuffer,
 		rp: rp,
 	}
-
+	for !rgfw::RGFW_window_shouldClose(window) {
+		mainLoop(ctx)
+	}
 	fmt::Println("start")
 }

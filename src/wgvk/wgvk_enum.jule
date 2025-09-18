@@ -1,9 +1,10 @@
 use "sprout/src/c"
 
 const WGPU_WHOLE_SIZE = c::MaxU64
+
 type WGPUBufferUsage = WGPUFlags
 type WGPUColorWriteMask = WGPUFlags
-type uint64_t =u64
+type uint64_t = u64
 type uint32_t = u32
 type int32_t = i32
 type float = f32
@@ -447,14 +448,31 @@ enum WGPUCompareFunction {
 }
 
 enum WGPUStencilOperation {
-    WGPUStencilOperation_Undefined: 0x00000000,
-    WGPUStencilOperation_Keep: 0x00000001,
-    WGPUStencilOperation_Zero: 0x00000002,
-    WGPUStencilOperation_Replace: 0x00000003,
-    WGPUStencilOperation_Invert: 0x00000004,
-    WGPUStencilOperation_IncrementClamp: 0x00000005,
-    WGPUStencilOperation_DecrementClamp: 0x00000006,
-    WGPUStencilOperation_IncrementWrap: 0x00000007,
-    WGPUStencilOperation_DecrementWrap: 0x00000008,
-    WGPUStencilOperation_Force32: 0x7FFFFFFF
+	WGPUStencilOperation_Undefined: 0x00000000,
+	WGPUStencilOperation_Keep: 0x00000001,
+	WGPUStencilOperation_Zero: 0x00000002,
+	WGPUStencilOperation_Replace: 0x00000003,
+	WGPUStencilOperation_Invert: 0x00000004,
+	WGPUStencilOperation_IncrementClamp: 0x00000005,
+	WGPUStencilOperation_DecrementClamp: 0x00000006,
+	WGPUStencilOperation_IncrementWrap: 0x00000007,
+	WGPUStencilOperation_DecrementWrap: 0x00000008,
+	WGPUStencilOperation_Force32: 0x7FFFFFFF,
 }
+
+let WGPUBufferUsage_None: WGPUBufferUsage = 0x0000000000000000
+let WGPUBufferUsage_MapRead: WGPUBufferUsage = 0x0000000000000001
+let WGPUBufferUsage_MapWrite: WGPUBufferUsage = 0x0000000000000002
+let WGPUBufferUsage_CopySrc: WGPUBufferUsage = 0x0000000000000004
+let WGPUBufferUsage_CopyDst: WGPUBufferUsage = 0x0000000000000008
+let WGPUBufferUsage_Index: WGPUBufferUsage = 0x0000000000000010
+let WGPUBufferUsage_Vertex: WGPUBufferUsage = 0x0000000000000020
+let WGPUBufferUsage_Uniform: WGPUBufferUsage = 0x0000000000000040
+let WGPUBufferUsage_Storage: WGPUBufferUsage = 0x0000000000000080
+let WGPUBufferUsage_Indirect: WGPUBufferUsage = 0x0000000000000100
+let WGPUBufferUsage_QueryResolve: WGPUBufferUsage = 0x0000000000000200
+let WGPUBufferUsage_ShaderDeviceAddress: WGPUBufferUsage = 0x0000000010000000
+let WGPUBufferUsage_AccelerationStructureInput: WGPUBufferUsage = 0x0000000020000000
+let WGPUBufferUsage_AccelerationStructureStorage: WGPUBufferUsage = 0x0000000040000000
+let WGPUBufferUsage_ShaderBindingTable: WGPUBufferUsage = 0x0000000080000000
+let WGPUBufferUsage_Raytracing: WGPUBufferUsage = 0x00000000F0000080

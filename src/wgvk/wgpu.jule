@@ -196,18 +196,27 @@ cpp struct WGPURenderPipelineDescriptor {
 type WGPURenderPipelineDescriptor = cpp.WGPURenderPipelineDescriptor
 
 #typedef
-cpp struct WGPUBufferDescriptor{
-nextInChain:*WGPUChainedStruct
- label:    WGPUStringView
- usage:    WGPUBufferUsage
- size:    uint64_t
- mappedAtCreation:    WGPUBool
+cpp struct WGPUBufferDescriptor {
+	nextInChain:      *WGPUChainedStruct
+	label:            WGPUStringView
+	usage:            WGPUBufferUsage
+	size:             uint64_t
+	mappedAtCreation: WGPUBool
 }
 
 type WGPUBufferDescriptor = cpp.WGPUBufferDescriptor
 
 #typedef
-cpp struct WGPURenderBundleEncoderDescriptor{}
+cpp struct WGPURenderBundleEncoderDescriptor {
+	nextInChain:        *WGPUChainedStruct
+	label:              WGPUStringView
+	colorFormatCount:   size_t
+	colorFormats:       *WGPUTextureFormat
+	depthStencilFormat: WGPUTextureFormat
+	sampleCount:        uint32_t
+	depthReadOnly:      WGPUBool
+	stencilReadOnly:    WGPUBool
+}
 
 type WGPURenderBundleEncoderDescriptor = cpp.WGPURenderBundleEncoderDescriptor
 
@@ -549,4 +558,4 @@ type WGPURequestAdapterCallback = cpp.WGPURequestAdapterCallback
 type WGPURequestDeviceCallback = cpp.WGPURequestDeviceCallback
 type WGPUProc = cpp.WGPUProc
 type WGPUDeviceLostCallback = cpp.WGPUDeviceLostCallback
-type WGPUUncapturedErrorCallback = cpp.WGPUUncapturedErrorCallback              
+type WGPUUncapturedErrorCallback = cpp.WGPUUncapturedErrorCallback

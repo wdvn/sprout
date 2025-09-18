@@ -1,82 +1,19 @@
 cpp use "wgvk.hpp"
 
 #typedef
-cpp struct WGPUTextureImp{}
+cpp struct WGPUFutureImpl{}
 
 #typedef
-cpp struct WGPUTextureViewImp{}
+cpp struct WGPUTopLevelAccelerationStructureImpl{}
 
 #typedef
-cpp struct WGPUBufferImp{}
+cpp struct WGPUBottomLevelAccelerationStructureImpl{}
 
 #typedef
-cpp struct WGPUBindGroupImp{}
+cpp struct WGPURaytracingPipelineImpl{}
 
 #typedef
-cpp struct WGPUBindGroupLayoutImp{}
-
-#typedef
-cpp struct WGPUPipelineLayoutImp{}
-
-#typedef
-cpp struct WGPUFutureImp{}
-
-#typedef
-cpp struct WGPURenderPassEncoderImp{}
-
-#typedef
-cpp struct WGPUComputePassEncoderImp{}
-
-#typedef
-cpp struct WGPURenderBundleImp{}
-
-#typedef
-cpp struct WGPURenderBundleEncoderImp{}
-
-#typedef
-cpp struct WGPUCommandEncoderImp{}
-
-#typedef
-cpp struct WGPUCommandBufferImp{}
-
-#typedef
-cpp struct WGPUQueueImp{}
-
-#typedef
-cpp struct WGPUQuerySetImp{}
-
-#typedef
-cpp struct WGPUInstanceImp{}
-
-#typedef
-cpp struct WGPUAdapterImp{}
-
-#typedef
-cpp struct WGPUDeviceImp{}
-
-#typedef
-cpp struct WGPUSurfaceImp{}
-
-#typedef
-cpp struct WGPUShaderModuleImp{}
-
-#typedef
-cpp struct WGPURenderPipelineImp{}
-
-#typedef
-cpp struct WGPUComputePipelineImp{}
-
-#typedef
-cpp struct WGPUTopLevelAccelerationStructureImp{}
-
-#typedef
-cpp struct WGPUBottomLevelAccelerationStructureImp{}
-
-#typedef
-cpp struct WGPURaytracingPipelineImp{}
-
-#typedef
-cpp struct WGPURaytracingPassEncoderImp{}
+cpp struct WGPURaytracingPassEncoderImpl{}
 
 #typedef
 cpp struct WGPUSurfaceImpl{}
@@ -154,32 +91,32 @@ cpp struct WGPURayTracingAccelerationContainerImpl{}
 cpp struct WGPURayTracingShaderBindingTableImpl{}
 
 //********************************
-type WGPUTexture = cpp.WGPUTextureImp
-type WGPUTextureView = cpp.WGPUTextureViewImp
-type WGPUBuffer = cpp.WGPUBufferImp
-type WGPUBindGroup = cpp.WGPUBindGroupImp
-type WGPUBindGroupLayout = cpp.WGPUBindGroupLayoutImp
-type WGPUPipelineLayout = cpp.WGPUPipelineLayoutImp
-type WGPUFuture = cpp.WGPUFutureImp
-type WGPURenderPassEncoder = cpp.WGPURenderPassEncoderImp
-type WGPUComputePassEncoder = cpp.WGPUComputePassEncoderImp
-type WGPURenderBundle = cpp.WGPURenderBundleImp
-type WGPURenderBundleEncoder = cpp.WGPURenderBundleEncoderImp
-type WGPUCommandEncoder = cpp.WGPUCommandEncoderImp
-type WGPUCommandBuffer = cpp.WGPUCommandBufferImp
-type WGPUQueue = cpp.WGPUQueueImp
-type WGPUQuerySet = cpp.WGPUQuerySetImp
-type WGPUInstance = cpp.WGPUInstanceImp
-type WGPUAdapter = cpp.WGPUAdapterImp
-type WGPUDevice = cpp.WGPUDeviceImp
-type WGPUSurface = cpp.WGPUSurfaceImp
-type WGPUShaderModule = cpp.WGPUShaderModuleImp
-type WGPURenderPipeline = cpp.WGPURenderPipelineImp
-type WGPUComputePipeline = cpp.WGPUComputePipelineImp
-type WGPUTopLevelAccelerationStructure = cpp.WGPUTopLevelAccelerationStructureImp
-type WGPUBottomLevelAccelerationStructure = cpp.WGPUBottomLevelAccelerationStructureImp
-type WGPURaytracingPipeline = cpp.WGPURaytracingPipelineImp
-type WGPURaytracingPassEncoder = cpp.WGPURaytracingPassEncoderImp
+type WGPUTexture = cpp.WGPUTextureImpl
+type WGPUTextureView = cpp.WGPUTextureViewImpl
+type WGPUBuffer = cpp.WGPUBufferImpl
+type WGPUBindGroup = cpp.WGPUBindGroupImpl
+type WGPUBindGroupLayout = cpp.WGPUBindGroupLayoutImpl
+type WGPUPipelineLayout = cpp.WGPUPipelineLayoutImpl
+type WGPUFuture = cpp.WGPUFutureImpl
+type WGPURenderPassEncoder = cpp.WGPURenderPassEncoderImpl
+type WGPUComputePassEncoder = cpp.WGPUComputePassEncoderImpl
+type WGPURenderBundle = cpp.WGPURenderBundleImpl
+type WGPURenderBundleEncoder = cpp.WGPURenderBundleEncoderImpl
+type WGPUCommandEncoder = cpp.WGPUCommandEncoderImpl
+type WGPUCommandBuffer = cpp.WGPUCommandBufferImpl
+type WGPUQueue = cpp.WGPUQueueImpl
+type WGPUQuerySet = cpp.WGPUQuerySetImpl
+type WGPUInstance = cpp.WGPUInstanceImpl
+type WGPUAdapter = cpp.WGPUAdapterImpl
+type WGPUDevice = cpp.WGPUDeviceImpl
+type WGPUSurface = cpp.WGPUSurfaceImpl
+type WGPUShaderModule = cpp.WGPUShaderModuleImpl
+type WGPURenderPipeline = cpp.WGPURenderPipelineImpl
+type WGPUComputePipeline = cpp.WGPUComputePipelineImpl
+type WGPUTopLevelAccelerationStructure = cpp.WGPUTopLevelAccelerationStructureImpl
+type WGPUBottomLevelAccelerationStructure = cpp.WGPUBottomLevelAccelerationStructureImpl
+type WGPURaytracingPipeline = cpp.WGPURaytracingPipelineImpl
+type WGPURaytracingPassEncoder = cpp.WGPURaytracingPassEncoderImpl
 
 type WGPUSampler = cpp.WGPUSamplerImpl
 type WGPUFence = cpp.WGPUFenceImpl
