@@ -1,2 +1,0 @@
-const MaxU64 :u64=0xFFFFFFFFFFFFFFFF
-const MaxU32 :u32 =0xFFFFFFFF

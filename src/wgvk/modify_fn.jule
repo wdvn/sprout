@@ -1,6 +1,0 @@
-use "sprout/src/c"
-
-fn NewWGPUStringView(data: str): WGPUStringView {
-	let mut ptr = unsafe { c::StrToCharPtr("1234") }
-	ret WGPUStringView{data: ptr, length: (size_t)(len(data))}
-}
