@@ -142,7 +142,101 @@ update_player_movement :: proc(player: ^Player, playerSpeed: f32) {
         player.position.x += playerSpeed * delta_time
     }
 }
+draw_ground :: proc(player_position: rl.Vector3) {
+// Ground Parameters
+    GROUND_SIZE :: 200.0 // Still using a huge ground cube for continuous texture
+    GROUND_HEIGHT :: 0.1
+    GROUND_COLOR :: rl.DARKGRAY
+    GRID_LINES :: 21    // Number of lines (21 lines gives you 20 squares)
+    GRID_RANGE :: 10.0  // 10 units in each direction (20x20 total area)
+    GRID_COLOR :: rl.GRAY
 
+    // 1. Calculate the Ground Plane's Center Position
+    // We center the ground on the player's X and Z position, but keep Y constant.
+    ground_center : rl.Vector3 = {
+        player_position.x,
+        -GROUND_HEIGHT / 2.0, // Fixed Y position so the surface is at y=0
+        player_position.z
+    }
+
+    // 2. Draw the Solid Ground Plane
+    rl.DrawCube(
+    ground_center, // Center position is now player-relative
+    GROUND_SIZE, // X dimension (width)
+    GROUND_HEIGHT, // Y dimension (height/thickness)
+    GROUND_SIZE, // Z dimension (depth)
+    GROUND_COLOR
+    )
+
+    // 3. Draw the Local Grid Lines Manually (Centered on Player)
+    // We calculate the nearest "grid cell" boundary to the player to keep the grid aligned.
+
+    // Get the nearest whole unit (floor) of the player's position
+    start_x := math.floor(player_position.x - GRID_RANGE)
+    start_z := math.floor(player_position.z - GRID_RANGE)
+
+    // Calculate the actual center of the visual grid display (to keep it clean)
+    grid_center_x := start_x + GRID_RANGE
+    grid_center_z := start_z + GRID_RANGE
+
+    // Y position is always 0.0 for the top surface of the ground
+
+    // Draw lines along the Z-axis (parallel to X-axis)
+    for i in 0 ..< i32(GRID_LINES) {
+        x := start_x + f32(i)
+
+        start_point : rl.Vector3 = { x, 0.5, grid_center_z - GRID_RANGE }
+        end_point : rl.Vector3   = { x, 0.5, grid_center_z + GRID_RANGE }
+
+        rl.DrawLine3D(start_point, end_point, GRID_COLOR)
+    }
+
+    // Draw lines along the X-axis (parallel to Z-axis)
+    for i in 0 ..< i32(GRID_LINES) {
+        z := start_z + f32(i)
+
+        start_point : rl.Vector3 = { grid_center_x - GRID_RANGE, 0.5, z }
+        end_point : rl.Vector3   = { grid_center_x + GRID_RANGE, 0.5, z }
+
+        rl.DrawLine3D(start_point, end_point, GRID_COLOR)
+    }
+}
+draw_2d_axis_indicator :: proc(camera: rl.Camera3D) {
+// Define the position in 2D screen space (bottom-left area)
+    CENTER_X :: 100
+    CENTER_Y := i32(screenHeight) - 100
+    AXIS_LENGTH :: 50.0 // The length of the 2D lines in pixels
+
+    // Define the origin of the world axes (0, 0, 0)
+    world_origin := rl.Vector3{ 0.0, 0.0, 0.0 }
+
+    // Define the world end points of a 3D axis (relative to the origin)
+    world_x_end := rl.Vector3{ AXIS_LENGTH, 0.0, 0.0 }
+    world_y_end := rl.Vector3{ 0.0, AXIS_LENGTH, 0.0 }
+    world_z_end := rl.Vector3{ 0.0, 0.0, AXIS_LENGTH }
+
+    // Since we can't draw in 3D, we'll draw a simplified 2D representation.
+    // We project the world's axes onto the screen from a fixed point.
+    // NOTE: This will only work if the camera's Target is fixed or close to the origin.
+    // A simpler approach is to draw fixed lines that ONLY indicate the absolute direction.
+
+    // A simpler, fixed-direction 2D indicator (less dynamic, but reliable):
+    // This assumes Y is always UP and doesn't rotate with the camera, which is standard for RPGs.
+
+    // 1. Draw X (East/West) - RED
+    rl.DrawLine(CENTER_X, CENTER_Y, CENTER_X + 40, CENTER_Y, rl.RED)
+    rl.DrawText(cstring("X"), CENTER_X + 45, CENTER_Y - 10, 10, rl.RED)
+
+    // 2. Draw Y (Up/Down) - GREEN
+    rl.DrawLine(CENTER_X, CENTER_Y, CENTER_X, CENTER_Y - 40, rl.GREEN)
+    rl.DrawText(cstring("Y"), CENTER_X - 10, CENTER_Y - 50, 10, rl.GREEN)
+
+    // 3. Draw Z (North/South) - BLUE
+    // Since Z is the depth, we can draw a line diagonally or just assume the player 
+    // knows Z is depth. For a more complete view, we'll show it offset.
+    rl.DrawLine(CENTER_X, CENTER_Y, CENTER_X - 30, CENTER_Y + 30, rl.BLUE)
+    rl.DrawText(cstring("Z"), CENTER_X - 45, CENTER_Y + 20, 10, rl.BLUE)
+}
 // --- Main Entry Point ---
 main :: proc() {
     rl.InitWindow(screenWidth, screenHeight, cstring("Odin 2.5D RPG"))
@@ -226,7 +320,9 @@ main :: proc() {
         rl.ClearBackground(rl.SKYBLUE)
 
         rl.BeginMode3D(camera)
-        rl.DrawGrid(20, 1.0)
+
+        // Pass the player's current position to draw the ground and grid relative to it.
+        draw_ground(player.position)
         rl.DrawCube(player.position, player.scale.x, player.scale.y, player.scale.z, player.color)
         if npc1.health > 0 {
             rl.DrawCube(npc1.position, npc1.scale.x, npc1.scale.y, npc1.scale.z, npc1.color)
@@ -248,7 +344,7 @@ main :: proc() {
             handle_dialogue(&currentState, screenWidth, screenHeight, &npc1)
         }
         // The old dialogue drawing code is REMOVED from here
-
+        draw_2d_axis_indicator(camera)
         rl.EndDrawing()
     }
 
