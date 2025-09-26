@@ -1,6 +1,0 @@
-[submodule "lib/wgvk"]
-	path = lib/wgvk
-	url = git@github.com:wdvn/WGVK.git
-[submodule "wgpu-odin"]
-	path = wgpu-odin
-	url = https://github.com/Capati/wgpu-odin.git
