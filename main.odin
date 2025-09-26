@@ -120,6 +120,29 @@ npc: ^NPC
     rl.DrawText(fmt.ctprint(npc.dialogue), 20, screenHeight - 80, 20, rl.WHITE)
 }
 
+// NOTE: Assuming 'Player' is a struct that contains a 'position: rl.Vector3' field.
+// We also assume 'playerSpeed' is a globally accessible constant/variable.
+update_player_movement :: proc(player: ^Player, playerSpeed: f32) {
+    delta_time := rl.GetFrameTime()
+
+    // Move forward (Z-axis negative)
+    if rl.IsKeyDown(.W) {
+        player.position.z -= playerSpeed * delta_time
+    }
+    // Move backward (Z-axis positive)
+    if rl.IsKeyDown(.S) {
+        player.position.z += playerSpeed * delta_time
+    }
+    // Move left (X-axis negative)
+    if rl.IsKeyDown(.A) {
+        player.position.x -= playerSpeed * delta_time
+    }
+    // Move right (X-axis positive)
+    if rl.IsKeyDown(.D) {
+        player.position.x += playerSpeed * delta_time
+    }
+}
+
 // --- Main Entry Point ---
 main :: proc() {
     rl.InitWindow(screenWidth, screenHeight, cstring("Odin 2.5D RPG"))
@@ -146,18 +169,7 @@ main :: proc() {
     // 1. UPDATE LOGIC
         #partial switch currentState {
         case .GAMEPLAY:
-            if rl.IsKeyDown(.W) {
-                player.position.z -= playerSpeed * rl.GetFrameTime()
-            }
-            if rl.IsKeyDown(.S) {
-                player.position.z += playerSpeed * rl.GetFrameTime()
-            }
-            if rl.IsKeyDown(.A) {
-                player.position.x -= playerSpeed * rl.GetFrameTime()
-            }
-            if rl.IsKeyDown(.D) {
-                player.position.x += playerSpeed * rl.GetFrameTime()
-            }
+            update_player_movement(&player, playerSpeed)
 
             if rl.IsKeyPressed(.K) {
             // ... (spell casting logic remains the same)
