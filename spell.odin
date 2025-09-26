@@ -41,7 +41,7 @@ spawn_spell :: proc(
                     radius       = 0.5,
                     speed        = 10.0,
                     damage       = 10,
-                    max_distance = 10.0,
+                    max_distance = 120.0,
                     color        = rl.YELLOW,
                     is_active    = true,
                     spell_type   = .BALL,
