@@ -14,8 +14,8 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 // Global constants
-screenWidth :: 800
-screenHeight :: 450
+screenWidth :: 1270
+screenHeight :: 900
 playerSpeed :: 5.0
 interactionDistance :: 5.0
 
