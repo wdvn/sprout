@@ -19,142 +19,240 @@ screenHeight :: 900
 playerSpeed :: 5.0
 interactionDistance :: 5.0
 
-// Enums for game states
+// --- Spell System ---
+Spell_Type :: enum {
+    BALL,
+}
+
+max_spells :: 10
+
+Spell :: struct {
+    position:     rl.Vector3,
+    velocity:     rl.Vector3,
+    start_pos:    rl.Vector3,
+    radius:       f32,
+    speed:        f32,
+    damage:       int,
+    max_distance: f32,
+    color:        rl.Color,
+    is_active:    bool,
+    spell_type:   Spell_Type,
+}
+
+// --- Game Entities ---
 GameState :: enum {
     GAMEPLAY,
     DIALOGUE,
 }
 
-// Player data structure
 Player :: struct {
     position: rl.Vector3,
-    scale: rl.Vector3,
-    color: rl.Color,
+    scale:    rl.Vector3,
+    color:    rl.Color,
+    health:   int,
 }
 
-// NPC data structure
 NPC :: struct {
     position: rl.Vector3,
-    scale: rl.Vector3,
-    color: rl.Color,
+    scale:    rl.Vector3,
+    color:    rl.Color,
     dialogue: string,
     isActive: bool,
+    health:   int,
 }
 
-// Function to initialize the player
+// --- Initialization Functions ---
 init_player :: proc() -> Player {
-    player: Player
-    player.position = { 0.0, 0.0, 0.0 }
-    player.scale = { 1.0, 2.0, 1.0 }
-    player.color = rl.RED
-    return player
+    return Player{
+        position = {0.0, 0.0, 0.0},
+        scale    = {1.0, 2.0, 1.0},
+        color    = rl.RED,
+        health   = 100,
+    }
 }
 
-// Function to initialize an NPC
 init_npc :: proc(position: rl.Vector3, dialogue: string) -> NPC {
-    npc: NPC
-    npc.position = position
-    npc.scale = { 1.0, 2.0, 1.0 }
-    npc.color = rl.BLUE
-    npc.dialogue = dialogue
-    npc.isActive = false
-    return npc
+    return NPC{
+        position = position,
+        scale    = {1.0, 2.0, 1.0},
+        color    = rl.BLUE,
+        dialogue = dialogue,
+        isActive = false,
+        health   = 50,
+    }
 }
 
-// Main entry point
+// --- Spell Management Functions ---
+spawn_spell :: proc(
+    spells:     ^[max_spells]Spell,
+    start_pos:  rl.Vector3,
+    direction:  rl.Vector3,
+    spell_type: Spell_Type,
+) {
+    for i in 0..<max_spells {
+        if !spells[i].is_active {
+            switch spell_type {
+            case .BALL:
+                spells[i] = Spell{
+                    position     = start_pos,
+                    velocity     = direction,
+                    start_pos    = start_pos,
+                    radius       = 0.5,
+                    speed        = 10.0,
+                    damage       = 10,
+                    max_distance = 10.0,
+                    color        = rl.YELLOW,
+                    is_active    = true,
+                    spell_type   = .BALL,
+                }
+            }
+            break // Spawn only one spell at a time
+        }
+    }
+}
+
+update_spells :: proc(spells: ^[max_spells]Spell, npc: ^NPC) {
+    for i in 0..<max_spells {
+        spell := &spells[i]
+        if !spell.is_active {
+            continue
+        }
+
+        // Movement
+        spell.position = rl.Vector3Add(spell.position, rl.Vector3Scale(spell.velocity, spell.speed * rl.GetFrameTime()))
+
+        // Collision with NPC
+        if npc.health > 0 {
+            npc_box := rl.BoundingBox{
+                min = rl.Vector3Subtract(npc.position, rl.Vector3Scale(npc.scale, 0.5)),
+                max = rl.Vector3Add(npc.position, rl.Vector3Scale(npc.scale, 0.5)),
+            }
+            if rl.CheckCollisionBoxSphere(npc_box, spell.position, spell.radius) {
+                spell.is_active = false
+                npc.health -= spell.damage
+                fmt.printf("Dealt %d damage to NPC. NPC health: %d\n", spell.damage, npc.health)
+            }
+        }
+
+        // Check distance for deactivation
+        if rl.Vector3Distance(spell.position, spell.start_pos) > spell.max_distance {
+            spell.is_active = false
+        }
+    }
+}
+
+draw_spells :: proc(spells: ^[max_spells]Spell) {
+    for i in 0..<max_spells {
+        spell := &spells[i]
+        if !spell.is_active {
+            continue
+        }
+
+        switch spell.spell_type {
+        case .BALL:
+            rl.DrawSphere(spell.position, spell.radius, spell.color)
+        }
+    }
+}
+
+// --- Main Entry Point ---
 main :: proc() {
-// Initialization
+    // Initialization
     rl.InitWindow(screenWidth, screenHeight, "Odin 2.5D RPG")
+    rl.SetTargetFPS(60)
 
-    // Initialize the camera for a 2.5D view
+    // Camera setup
     camera: rl.Camera3D
-    camera.position = { 20.0, 20.0, 20.0 }
-    camera.target = { 0.0, 0.0, 0.0 }
-    camera.up = { 0.0, 1.0, 0.0 }
-    camera.fovy = 45.0
-    camera.projection = rl.CameraProjection.PERSPECTIVE
+    camera.position   = {20.0, 20.0, 20.0}
+    camera.target     = {0.0, 0.0, 0.0}
+    camera.up         = {0.0, 1.0, 0.0}
+    camera.fovy       = 45.0
+    camera.projection = .PERSPECTIVE
 
-    // Initialize player and NPCs
+    // Game entities
     player := init_player()
-    npc1 := init_npc({ 10.0, 0.0, 10.0 }, "Hello, adventurer! The path to the east is dangerous.")
-
+    npc1 := init_npc({10.0, 0.0, 10.0}, "Hello, adventurer! The path to the east is dangerous.")
+    
+    // Spell management
+    spells: [max_spells]Spell
+    
     // Game state
     currentState := GameState.GAMEPLAY
 
-    rl.SetTargetFPS(60)
-
     // Main game loop
     for !rl.WindowShouldClose() {
-    // Update
-        if currentState == GameState.GAMEPLAY {
-        // Player movement
-            if rl.IsKeyDown(.W) {
-                player.position = rl.Vector3Add(player.position, rl.Vector3Scale({ 0.0, 0.0, -1.0 }, playerSpeed * rl.GetFrameTime()))
-            }
-            if rl.IsKeyDown(.S) {
-                player.position = rl.Vector3Add(player.position, rl.Vector3Scale({ 0.0, 0.0, 1.0 }, playerSpeed * rl.GetFrameTime()))
-            }
-            if rl.IsKeyDown(.A) {
-                player.position = rl.Vector3Add(player.position, rl.Vector3Scale({ -1.0, 0.0, 0.0 }, playerSpeed * rl.GetFrameTime()))
-            }
-            if rl.IsKeyDown(.D) {
-                player.position = rl.Vector3Add(player.position, rl.Vector3Scale({ 1.0, 0.0, 0.0 }, playerSpeed * rl.GetFrameTime()))
+        // --- Update ---
+        switch currentState {
+        case .GAMEPLAY:
+            // Player movement
+            if rl.IsKeyDown(.W) { player.position.z -= playerSpeed * rl.GetFrameTime() }
+            if rl.IsKeyDown(.S) { player.position.z += playerSpeed * rl.GetFrameTime() }
+            if rl.IsKeyDown(.A) { player.position.x -= playerSpeed * rl.GetFrameTime() }
+            if rl.IsKeyDown(.D) { player.position.x += playerSpeed * rl.GetFrameTime() }
+
+            // Spell casting
+            if rl.IsKeyPressed(.K) {
+                direction: rl.Vector3
+                if npc1.isActive {
+                    direction = rl.Vector3Normalize(rl.Vector3Subtract(npc1.position, player.position))
+                } else {
+                    // Default direction if no target is active
+                    direction = {0, 0, -1} // Assuming forward is -Z
+                }
+                spawn_spell(&spells, player.position, direction, .BALL)
             }
 
-            // Update camera to follow player (while maintaining fixed angle)
+            // Update spells
+            update_spells(&spells, &npc1)
+
+            // Camera follow
             camera.target = player.position
-            camera.position = rl.Vector3Add(player.position, { 20.0, 20.0, 20.0 })
+            camera.position = rl.Vector3Add(player.position, {20.0, 20.0, 20.0})
 
-            // Check for NPC interaction
+            // NPC interaction
             if rl.Vector3Distance(player.position, npc1.position) < interactionDistance {
                 npc1.isActive = true
                 if rl.IsKeyPressed(.E) {
-                    currentState = GameState.DIALOGUE
+                    currentState = .DIALOGUE
                 }
             } else {
                 npc1.isActive = false
             }
-        } else if currentState == GameState.DIALOGUE {
-        // Exit dialogue state when "E" is pressed
+
+        case .DIALOGUE:
             if rl.IsKeyPressed(.E) {
-                currentState = GameState.GAMEPLAY
+                currentState = .GAMEPLAY
             }
         }
 
-        // Draw
+        // --- Draw ---
         rl.BeginDrawing()
-
         rl.ClearBackground(rl.SKYBLUE)
 
-        // Draw the 3D scene (2.5D world)
+        // 3D Scene
         rl.BeginMode3D(camera)
-
-        // Draw a grid for the ground plane
         rl.DrawGrid(20, 1.0)
-
-        // Draw player
         rl.DrawCube(player.position, player.scale.x, player.scale.y, player.scale.z, player.color)
-
-        // Draw NPC
-        rl.DrawCube(npc1.position, npc1.scale.x, npc1.scale.y, npc1.scale.z, npc1.color)
-
+        if npc1.health > 0 {
+            rl.DrawCube(npc1.position, npc1.scale.x, npc1.scale.y, npc1.scale.z, npc1.color)
+        }
+        draw_spells(&spells)
         rl.EndMode3D()
 
-        // Draw the 2D UI on top of the 3D scene
-        text := fmt.ctprintf("Player Position: (%.1f, %.1f, %.1f)", player.position.x, player.position.y, player.position.z)
-        rl.DrawText(text, 10, 10, 20, rl.BLACK)
-        rl.DrawText(cstring("Use WASD to move"), 10, 40, 20, rl.DARKGRAY)
+        // 2D UI
+        rl.DrawText(fmt.ctprintf("Player Position: (%.1f, %.1f, %.1f)", player.position.x, player.position.y, player.position.z), 10, 10, 20, rl.BLACK)
+        rl.DrawText("Use WASD to move", 10, 40, 20, rl.DARKGRAY)
+        rl.DrawText("Press 'K' to cast a spell", 10, 70, 20, rl.DARKGRAY)
+        rl.DrawText(fmt.ctprintf("NPC Health: %d", npc1.health), 10, 100, 20, rl.BLACK)
 
-        // Draw interaction prompt
-        if npc1.isActive && currentState == GameState.GAMEPLAY {
-            rl.DrawText(cstring("Press 'E' to talk"), rl.GetScreenWidth() / 2 - 100, rl.GetScreenHeight() / 2, 20, rl.WHITE)
+        if npc1.isActive && currentState == .GAMEPLAY && npc1.health > 0 {
+            rl.DrawText("Press 'E' to talk", screenWidth / 2 - 100, screenHeight / 2, 20, rl.WHITE)
         }
 
-        // Draw dialogue box
-        if currentState == GameState.DIALOGUE {
-            rl.DrawRectangle(0, rl.GetScreenHeight() - 100, rl.GetScreenWidth(), 100, rl.Fade(rl.BLACK, 0.7))
-            rl.DrawText(fmt.ctprint(npc1.dialogue), 20, rl.GetScreenHeight() - 80, 20, rl.WHITE)
-            rl.DrawText(cstring("Press 'E' to continue..."), 20, rl.GetScreenHeight() - 40, 20, rl.GRAY)
+        if currentState == .DIALOGUE {
+            rl.DrawRectangle(0, screenHeight - 100, screenWidth, 100, rl.Fade(rl.BLACK, 0.7))
+            rl.DrawText(fmt.ctprint(npc1.dialogue), 20, screenHeight - 80, 20, rl.WHITE)
+            rl.DrawText("Press 'E' to continue...", 20, screenHeight - 40, 20, rl.GRAY)
         }
 
         rl.EndDrawing()
