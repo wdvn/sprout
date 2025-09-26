@@ -11,6 +11,7 @@
 package main
 
 import "core:fmt"
+import "core:math/rand"
 import rl "vendor:raylib"
 
 // Global constants
@@ -61,6 +62,16 @@ NPC :: struct {
     health:   int,
 }
 
+Enemy :: struct {
+    position:  rl.Vector3,
+    scale:     rl.Vector3,
+    color:     rl.Color,
+    health:    int,
+    is_active: bool,
+}
+
+max_enemies :: 20
+
 // --- Initialization Functions ---
 init_player :: proc() -> Player {
     return Player{
@@ -82,7 +93,7 @@ init_npc :: proc(position: rl.Vector3, dialogue: string) -> NPC {
     }
 }
 
-// --- Spell Management Functions ---
+// --- Spell Management ---
 spawn_spell :: proc(
     spells:     ^[max_spells]Spell,
     start_pos:  rl.Vector3,
@@ -106,35 +117,40 @@ spawn_spell :: proc(
                     spell_type   = .BALL,
                 }
             }
-            break // Spawn only one spell at a time
+            break
         }
     }
 }
 
-update_spells :: proc(spells: ^[max_spells]Spell, npc: ^NPC) {
+update_spells :: proc(spells: ^[max_spells]Spell, enemies: ^[max_enemies]Enemy) {
     for i in 0..<max_spells {
         spell := &spells[i]
         if !spell.is_active {
             continue
         }
 
-        // Movement
         spell.position = rl.Vector3Add(spell.position, rl.Vector3Scale(spell.velocity, spell.speed * rl.GetFrameTime()))
 
-        // Collision with NPC
-        if npc.health > 0 {
-            npc_box := rl.BoundingBox{
-                min = rl.Vector3Subtract(npc.position, rl.Vector3Scale(npc.scale, 0.5)),
-                max = rl.Vector3Add(npc.position, rl.Vector3Scale(npc.scale, 0.5)),
-            }
-            if rl.CheckCollisionBoxSphere(npc_box, spell.position, spell.radius) {
-                spell.is_active = false
-                npc.health -= spell.damage
-                fmt.printf("Dealt %d damage to NPC. NPC health: %d\n", spell.damage, npc.health)
+        // Collision with enemies
+        for j in 0..<max_enemies {
+            enemy := &enemies[j]
+            if enemy.is_active && enemy.health > 0 {
+                enemy_box := rl.BoundingBox{
+                    min = rl.Vector3Subtract(enemy.position, rl.Vector3Scale(enemy.scale, 0.5)),
+                    max = rl.Vector3Add(enemy.position, rl.Vector3Scale(enemy.scale, 0.5)),
+                }
+                if rl.CheckCollisionBoxSphere(enemy_box, spell.position, spell.radius) {
+                    spell.is_active = false
+                    enemy.health -= spell.damage
+                    fmt.printf("Dealt %d damage to enemy. Enemy health: %d\n", spell.damage, enemy.health)
+                    if enemy.health <= 0 {
+                        enemy.is_active = false
+                    }
+                    break // Spell hits one enemy at a time
+                }
             }
         }
 
-        // Check distance for deactivation
         if rl.Vector3Distance(spell.position, spell.start_pos) > spell.max_distance {
             spell.is_active = false
         }
@@ -143,25 +159,45 @@ update_spells :: proc(spells: ^[max_spells]Spell, npc: ^NPC) {
 
 draw_spells :: proc(spells: ^[max_spells]Spell) {
     for i in 0..<max_spells {
-        spell := &spells[i]
-        if !spell.is_active {
-            continue
+        if spells[i].is_active {
+            rl.DrawSphere(spells[i].position, spells[i].radius, spells[i].color)
         }
+    }
+}
 
-        switch spell.spell_type {
-        case .BALL:
-            rl.DrawSphere(spell.position, spell.radius, spell.color)
+// --- Enemy Management ---
+spawn_enemy :: proc(enemies: ^[max_enemies]Enemy) {
+    for i in 0..<max_enemies {
+        if !enemies[i].is_active {
+            enemies[i] = Enemy{
+                position = {
+                    f32(rand.int31_max(20)) - 10,
+                    0,
+                    f32(rand.int31_max(20)) - 10,
+                },
+                scale     = {1.0, 1.0, 1.0},
+                color     = rl.GREEN,
+                health    =  20, // Health between 20 and 70
+                is_active = true,
+            }
+            break
+        }
+    }
+}
+
+draw_enemies :: proc(enemies: ^[max_enemies]Enemy) {
+    for i in 0..<max_enemies {
+        if enemies[i].is_active {
+            rl.DrawCube(enemies[i].position, enemies[i].scale.x, enemies[i].scale.y, enemies[i].scale.z, enemies[i].color)
         }
     }
 }
 
 // --- Main Entry Point ---
 main :: proc() {
-    // Initialization
     rl.InitWindow(screenWidth, screenHeight, "Odin 2.5D RPG")
     rl.SetTargetFPS(60)
 
-    // Camera setup
     camera: rl.Camera3D
     camera.position   = {20.0, 20.0, 20.0}
     camera.target     = {0.0, 0.0, 0.0}
@@ -169,81 +205,86 @@ main :: proc() {
     camera.fovy       = 45.0
     camera.projection = .PERSPECTIVE
 
-    // Game entities
     player := init_player()
-    npc1 := init_npc({10.0, 0.0, 10.0}, "Hello, adventurer! The path to the east is dangerous.")
-    
-    // Spell management
+    npc1 := init_npc({10.0, 0.0, 10.0}, "Hello, adventurer!")
+
     spells: [max_spells]Spell
-    
-    // Game state
+    enemies: [max_enemies]Enemy
+
+    spawn_timer := f32(0)
     currentState := GameState.GAMEPLAY
 
-    // Main game loop
     for !rl.WindowShouldClose() {
-        // --- Update ---
         switch currentState {
         case .GAMEPLAY:
-            // Player movement
             if rl.IsKeyDown(.W) { player.position.z -= playerSpeed * rl.GetFrameTime() }
             if rl.IsKeyDown(.S) { player.position.z += playerSpeed * rl.GetFrameTime() }
             if rl.IsKeyDown(.A) { player.position.x -= playerSpeed * rl.GetFrameTime() }
             if rl.IsKeyDown(.D) { player.position.x += playerSpeed * rl.GetFrameTime() }
 
-            // Spell casting
             if rl.IsKeyPressed(.K) {
+                // Find the closest active enemy to target
+                closest_enemy: ^Enemy = nil
+                closest_dist :f32= 10
+
+                for i in 0..<max_enemies {
+                    enemy := &enemies[i]
+                    if enemy.is_active {
+                        dist := rl.Vector3Distance(player.position, enemy.position)
+                        if f32(dist) < f32(closest_dist) && dist < interactionDistance {
+                            closest_enemy = enemy
+                            closest_dist = dist
+                        }
+                    }
+                }
+
                 direction: rl.Vector3
-                if npc1.isActive {
-                    direction = rl.Vector3Normalize(rl.Vector3Subtract(npc1.position, player.position))
+                if closest_enemy != nil {
+                    direction = rl.Vector3Normalize(rl.Vector3Subtract(closest_enemy.position, player.position))
                 } else {
-                    // Default direction if no target is active
-                    direction = {0, 0, -1} // Assuming forward is -Z
+                    direction = {0, 0, -1}
                 }
                 spawn_spell(&spells, player.position, direction, .BALL)
             }
 
-            // Update spells
-            update_spells(&spells, &npc1)
+            // Enemy spawning
+            spawn_timer += rl.GetFrameTime()
+            if spawn_timer >= 2.0 {
+                spawn_enemy(&enemies)
+                spawn_timer = 0
+            }
 
-            // Camera follow
+            update_spells(&spells, &enemies)
+
             camera.target = player.position
             camera.position = rl.Vector3Add(player.position, {20.0, 20.0, 20.0})
 
-            // NPC interaction
             if rl.Vector3Distance(player.position, npc1.position) < interactionDistance {
                 npc1.isActive = true
-                if rl.IsKeyPressed(.E) {
-                    currentState = .DIALOGUE
-                }
+                if rl.IsKeyPressed(.E) { currentState = .DIALOGUE }
             } else {
                 npc1.isActive = false
             }
 
         case .DIALOGUE:
-            if rl.IsKeyPressed(.E) {
-                currentState = .GAMEPLAY
-            }
+            if rl.IsKeyPressed(.E) { currentState = .GAMEPLAY }
         }
 
-        // --- Draw ---
         rl.BeginDrawing()
         rl.ClearBackground(rl.SKYBLUE)
 
-        // 3D Scene
         rl.BeginMode3D(camera)
         rl.DrawGrid(20, 1.0)
         rl.DrawCube(player.position, player.scale.x, player.scale.y, player.scale.z, player.color)
         if npc1.health > 0 {
             rl.DrawCube(npc1.position, npc1.scale.x, npc1.scale.y, npc1.scale.z, npc1.color)
         }
+        draw_enemies(&enemies)
         draw_spells(&spells)
         rl.EndMode3D()
 
-        // 2D UI
-        rl.DrawText(fmt.ctprintf("Player Position: (%.1f, %.1f, %.1f)", player.position.x, player.position.y, player.position.z), 10, 10, 20, rl.BLACK)
-        rl.DrawText("Use WASD to move", 10, 40, 20, rl.DARKGRAY)
-        rl.DrawText("Press 'K' to cast a spell", 10, 70, 20, rl.DARKGRAY)
-        rl.DrawText(fmt.ctprintf("NPC Health: %d", npc1.health), 10, 100, 20, rl.BLACK)
+        rl.DrawText(fmt.ctprintf("Player HP: %d", player.health), 10, 10, 20, rl.BLACK)
+        rl.DrawText("Press 'K' to cast a spell", 10, 40, 20, rl.DARKGRAY)
 
         if npc1.isActive && currentState == .GAMEPLAY && npc1.health > 0 {
             rl.DrawText("Press 'E' to talk", screenWidth / 2 - 100, screenHeight / 2, 20, rl.WHITE)
@@ -258,6 +299,5 @@ main :: proc() {
         rl.EndDrawing()
     }
 
-    // De-Initialization
     rl.CloseWindow()
 }
