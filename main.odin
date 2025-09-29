@@ -12,7 +12,6 @@ package main
 
 import "core:fmt"
 import "core:math"
-import "core:math/rand"
 import rl "vendor:raylib"
 
 // Global constants
@@ -27,36 +26,20 @@ GameState :: enum {
     DIALOGUE,
 }
 
-Player :: struct {
-    position: rl.Vector3,
-    scale:    rl.Vector3,
-    color:    rl.Color,
-    health:   int,
-}
-
 NPC :: struct {
     position: rl.Vector3,
-    scale:    rl.Vector3,
-    color:    rl.Color,
+    scale: rl.Vector3,
+    color: rl.Color,
     dialogue: string,
     isActive: bool,
-    health:   int,
+    health: int,
 }
 
 // --- Initialization Functions ---
-init_player :: proc() -> Player {
-    return Player{
-        position = {0.0, 0.0, 0.0},
-        scale    = {1.0, 2.0, 1.0},
-        color    = rl.RED,
-        health   = 100,
-    }
-}
-
 init_npc :: proc(position: rl.Vector3, dialogue: string) -> NPC {
     return NPC{
         position = position,
-        scale    = {1.0, 2.0, 1.0},
+        scale    = { 1.0, 2.0, 1.0 },
         color    = rl.BLUE,
         dialogue = dialogue,
         isActive = false,
@@ -70,14 +53,14 @@ main :: proc() {
     rl.SetTargetFPS(60)
 
     camera: rl.Camera3D
-    camera.position   = {20.0, 20.0, 20.0}
-    camera.target     = {0.0, 0.0, 0.0}
-    camera.up         = {0.0, 1.0, 0.0}
-    camera.fovy       = 45.0
+    camera.position = { 20.0, 20.0, 20.0 }
+    camera.target = { 0.0, 0.0, 0.0 }
+    camera.up = { 0.0, 1.0, 0.0 }
+    camera.fovy = 45.0
     camera.projection = .PERSPECTIVE
 
     player := init_player()
-    npc1 := init_npc({10.0, 0.0, 10.0}, "Hello, adventurer!")
+    npc1 := init_npc({ 10.0, 0.0, 10.0 }, "Hello, adventurer!")
 
     spells: [max_spells]Spell
     enemies: [max_enemies]Enemy
@@ -88,25 +71,22 @@ main :: proc() {
     for !rl.WindowShouldClose() {
         switch currentState {
         case .GAMEPLAY:
-            if rl.IsKeyDown(.W) { player.position.z -= playerSpeed * rl.GetFrameTime() }
-            if rl.IsKeyDown(.S) { player.position.z += playerSpeed * rl.GetFrameTime() }
-            if rl.IsKeyDown(.A) { player.position.x -= playerSpeed * rl.GetFrameTime() }
-            if rl.IsKeyDown(.D) { player.position.x += playerSpeed * rl.GetFrameTime() }
+            update_player(&player, playerSpeed)
 
             if rl.IsKeyPressed(.K) {
                 direction: rl.Vector3
                 if npc1.isActive {
                     direction = rl.Vector3Normalize(rl.Vector3Subtract(npc1.position, player.position))
                 } else {
-                    // Find the closest active enemy to target
-                    closest_enemy: ^Enemy = nil
+                // Find the closest active enemy to target
+                    closest_enemy : ^Enemy = nil
                     closest_dist := math.F32_MAX
 
-                    for i in 0..<max_enemies {
+                    for i in 0 ..< max_enemies {
                         enemy := &enemies[i]
                         if enemy.is_active {
                             dist := rl.Vector3Distance(player.position, enemy.position)
-                            if f32(dist) < f32(closest_dist) {
+                            if f64(dist) < closest_dist  {
                                 closest_enemy = enemy
                                 closest_dist = f64(dist)
                             }
@@ -116,7 +96,7 @@ main :: proc() {
                     if closest_enemy != nil {
                         direction = rl.Vector3Normalize(rl.Vector3Subtract(closest_enemy.position, player.position))
                     } else {
-                        direction = {0, 0, -1}
+                        direction = { 0, 0, -1 }
                     }
                 }
                 spawn_spell(&spells, player.position, direction, .BALL)
@@ -132,17 +112,21 @@ main :: proc() {
             update_spells(&spells, &npc1, &enemies)
 
             camera.target = player.position
-            camera.position = rl.Vector3Add(player.position, {20.0, 20.0, 20.0})
+            camera.position = rl.Vector3Add(player.position, { 20.0, 20.0, 20.0 })
 
             if rl.Vector3Distance(player.position, npc1.position) < interactionDistance {
                 npc1.isActive = true
-                if rl.IsKeyPressed(.E) { currentState = .DIALOGUE }
+                if rl.IsKeyPressed(.E) {
+                    currentState = .DIALOGUE
+                }
             } else {
                 npc1.isActive = false
             }
 
         case .DIALOGUE:
-            if rl.IsKeyPressed(.E) { currentState = .GAMEPLAY }
+            if rl.IsKeyPressed(.E) {
+                currentState = .GAMEPLAY
+            }
         }
 
         rl.BeginDrawing()
