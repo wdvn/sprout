@@ -1,8 +1,11 @@
 const std = @import("std");
-const libs = @import("libs/mod.zig");
+const libs = @import("libs");
+const String = @import("string").String;
 
 fn lessThan(a: i32, b: i32) bool {
-    return a > b;
+    //min heap with a < b
+    //max heap with a > b
+    return a < b;
 }
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -27,4 +30,12 @@ pub fn main() !void {
         std.debug.print("{d} ", .{val});
     }
     std.debug.print("\n", .{});
+
+    var s = String.init(allocator);
+    defer s.deinit();
+    // Use functions provided
+    try s.concat("🔥 Hello!");
+    _ = s.pop();
+    try s.concat(", World 🔥");
+   std.debug.print("{s}", .{s.str()});
 }

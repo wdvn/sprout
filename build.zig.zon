@@ -1,0 +1,13 @@
+.{
+    .name = .sprout,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.15.2",
+    .fingerprint = 0x423be29f6d7c2879,
+    .paths = .{"src"},
+    .dependencies = .{
+        .string = .{
+            .url = "https://github.com/JakubSzark/zig-string/archive/refs/heads/master.tar.gz",
+            .hash = "zig_string-0.10.0-6dpLWiqYAABQXLFx0hN20t4jyUobmRgL5RAJgDqWTGL4",
+        },
+    },
+}
