@@ -36,7 +36,7 @@ pub fn Heap(comptime T: type, comptime compareFn: fn (T, T) bool) type {
         }
 
         /// Remove and return the top element (Min or Max)
-        pub fn extract(self: *Self) ?T {
+        pub fn pop(self: *Self) ?T {
             const list = &self.items;
             if (list.items.len == 0) return null;
 

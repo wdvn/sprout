@@ -2,7 +2,7 @@ const std = @import("std");
 const libs = @import("libs/mod.zig");
 
 fn lessThan(a: i32, b: i32) bool {
-    return a < b;
+    return a > b;
 }
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -23,7 +23,7 @@ pub fn main() !void {
 
     // Extract them (Should come out sorted: 2, 5, 10, 30)
     std.debug.print("Extracting: ", .{});
-    while (min_heap.extract()) |val| {
+    while (min_heap.pop()) |val| {
         std.debug.print("{d} ", .{val});
     }
     std.debug.print("\n", .{});
