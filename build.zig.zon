@@ -9,5 +9,17 @@
             .url = "https://github.com/JakubSzark/zig-string/archive/refs/heads/master.tar.gz",
             .hash = "zig_string-0.10.0-6dpLWiqYAABQXLFx0hN20t4jyUobmRgL5RAJgDqWTGL4",
         },
+        .wgvk = .{
+            .url = "git+https://github.com/manuel5975p/WGVK#master",
+            .hash = "WGVK-0.0.1-toLO5VlCWwGHAg-zrxwOhuHlUQCYvfEO0bFmHr-aWIOD"
+        },
+        .zglfw = .{
+            .url = "https://github.com/zig-gamedev/zglfw/archive/feeeff9386dd44ba2c18488113023865c41b80a4.tar.gz",
+            .hash = "zglfw-0.10.0-dev-zgVDNLyhIQCZR_rbIf7hnCKuifzcmPOLOQhd_hrqq8cl",
+        },
+        .zmath = .{
+            .url = "https://github.com/zig-gamedev/zmath/archive/dafbb72d71237ab8fb364555193b7eb7fb958a29.tar.gz",
+            .hash = "zmath-0.11.0-dev-wjwivU8rAwD1vxlEofaYUPQv58qalTVNJUz9Mekvw56B",
+        },
     },
 }

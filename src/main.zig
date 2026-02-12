@@ -1,41 +1,48 @@
 const std = @import("std");
-const libs = @import("libs");
-const String = @import("string").String;
+const zglfw = @import("zglfw");
+const wgvk = @import("wgvk");
+const GameApp = @import("game/app.zig").App;
 
-fn lessThan(a: i32, b: i32) bool {
-    //min heap with a < b
-    //max heap with a > b
-    return a < b;
-}
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    
+    // Initialize GLFW
+    try zglfw.init();
+    defer zglfw.terminate();
 
-    // Create a Min-Heap for i32
-    var min_heap = libs.heap.Heap(i32, lessThan).init(allocator);
-    defer min_heap.deinit();
+    // Create window
+    zglfw.windowHint(.client_api, .no_api);
+    const window = try zglfw.Window.create(800, 600, "Gold Miner (WGVK)", null);
+    defer window.destroy();
 
-    // Insert unsorted numbers
-    try min_heap.insert(10);
-    try min_heap.insert(5);
-    try min_heap.insert(30);
-    try min_heap.insert(2);
+    // Initialize the game application
+    var app = GameApp{};
+    try app.init();
+    defer app.deinit();
 
-    std.debug.print("Top is: {?}\n", .{min_heap.peek()}); // Should be 2
+    std.debug.print("Starting Gold Miner Game (WGVK version)...\n", .{});
+    std.debug.print("Press Space to shoot (simulated). Close window to exit.\n", .{});
 
-    // Extract them (Should come out sorted: 2, 5, 10, 30)
-    std.debug.print("Extracting: ", .{});
-    while (min_heap.pop()) |val| {
-        std.debug.print("{d} ", .{val});
+    // Main game loop
+    while (!window.shouldClose()) {
+        zglfw.pollEvents();
+
+        // Update game state
+        const should_close = try app.update();
+        if (should_close) break;
+        
+        // Simulate input for testing (auto-shoot every few seconds could be added here)
+        if (window.getKey(.space) == .press and app.state == .aiming) {
+             app.state = .shooting;
+        }
+
+        // TODO: Add WGVK rendering here
+        // 1. Initialize Vulkan instance/device via WGVK
+        // 2. Create swapchain
+        // 3. Render loop
+
+        // Simulate frame delay (approx 60 FPS)
+        std.time.sleep(16 * 1000 * 1000);
     }
-    std.debug.print("\n", .{});
-
-    var s = String.init(allocator);
-    defer s.deinit();
-    // Use functions provided
-    try s.concat("🔥 Hello!");
-    _ = s.pop();
-    try s.concat(", World 🔥");
-   std.debug.print("{s}", .{s.str()});
 }
