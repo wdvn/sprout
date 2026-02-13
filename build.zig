@@ -31,29 +31,21 @@ pub fn build(b: *Build) void {
         exe.linkLibCpp();
     }
 
-    // Add rgfw dependency
-    const rgfw = b.dependency("rgfw", .{
+    // Add RGFW dependency (C single-header library)
+    const rgfw_dep = b.dependency("rgfw", .{
         .target = target,
         .optimize = optimize,
     });
-    // Assuming rgfw exposes a module named "rgfw" or "root"
-    // If it's a C library wrapper, it might just be an artifact.
-    // Let's try adding the module first.
-    if (rgfw.builder.modules.contains("rgfw")) {
-        exe.root_module.addImport("rgfw", rgfw.module("rgfw"));
-    } else {
-         exe.root_module.addImport("rgfw", rgfw.module("root"));
-    }
-    
-    // Link rgfw artifact if available (e.g., libraylib.a or similar)
-    // exe.linkLibrary(rgfw.artifact("rgfw")); 
+    exe.addIncludePath(rgfw_dep.path("")); // RGFW.h is at the root
+    exe.addCSourceFile(.{ .file = b.path("src/rgfw_impl.c"), .flags = &.{"-std=c99"} });
+    exe.linkSystemLibrary("X11"); // RGFW on Linux needs X11
 
-    // Add zmath dependency
-    const zmath = b.dependency("zmath", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.root_module.addImport("zmath", zmath.module("root"));
+    // // Add zmath dependency
+    // const zmath = b.dependency("zmath", .{
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+    // exe.root_module.addImport("zmath", zmath.module("root"));
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());

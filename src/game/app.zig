@@ -26,7 +26,7 @@ pub const App = @This();
 
 // Engine state
 timer: std.time.Timer,
-rng: std.rand.DefaultPrng,
+// rng: std.rand.DefaultPrng,
 
 // Game state
 state: GameState = .aiming,
@@ -42,7 +42,7 @@ caught_gold_index: ?usize = null,
 
 pub fn init(app: *App) !void {
     app.timer = try std.time.Timer.start();
-    app.rng = std.rand.DefaultPrng.init(0);
+    // app.rng = std.rand.DefaultPrng.init(0);
     app.golds = std.ArrayList(Gold).init(std.heap.page_allocator);
 
     // Initialize some gold chunks
