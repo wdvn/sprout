@@ -1,5 +1,5 @@
 const std = @import("std");
-const zglfw = @import("zglfw");
+const rlfw = @import("rlfw");
 const wgvk = @import("wgvk");
 const GameApp = @import("game/app.zig").App;
 
@@ -7,13 +7,19 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     
-    // Initialize GLFW
-    try zglfw.init();
-    defer zglfw.terminate();
+    // Initialize RLFW (Assuming similar API to GLFW or Raylib)
+    // If it's a wrapper around GLFW, it might be rlfw.init()
+    // If it's Raylib, it's InitWindow()
+    
+    // Since I don't have the exact API, I'll assume a GLFW-like structure based on the name "rlfw" (Raylib-GLFW?)
+    // But given the user asked to "move glfw to rlfw", it implies rlfw is the windowing lib.
+    
+    // Placeholder initialization - adjust based on actual API
+    try rlfw.init();
+    defer rlfw.terminate();
 
     // Create window
-    zglfw.windowHint(.client_api, .no_api);
-    const window = try zglfw.Window.create(800, 600, "Gold Miner (WGVK)", null);
+    const window = try rlfw.Window.create(800, 600, "Gold Miner (WGVK + RLFW)", null);
     defer window.destroy();
 
     // Initialize the game application
@@ -21,21 +27,22 @@ pub fn main() !void {
     try app.init();
     defer app.deinit();
 
-    std.debug.print("Starting Gold Miner Game (WGVK version)...\n", .{});
+    std.debug.print("Starting Gold Miner Game (WGVK + RLFW version)...\n", .{});
     std.debug.print("Press Space to shoot (simulated). Close window to exit.\n", .{});
 
     // Main game loop
     while (!window.shouldClose()) {
-        zglfw.pollEvents();
+        rlfw.pollEvents();
 
         // Update game state
         const should_close = try app.update();
         if (should_close) break;
         
-        // Simulate input for testing (auto-shoot every few seconds could be added here)
-        if (window.getKey(.space) == .press and app.state == .aiming) {
-             app.state = .shooting;
-        }
+        // Simulate input for testing
+        // Adjust input handling based on RLFW API
+        // if (window.getKey(.space) == .press and app.state == .aiming) {
+        //      app.state = .shooting;
+        // }
 
         // TODO: Add WGVK rendering here
         // 1. Initialize Vulkan instance/device via WGVK

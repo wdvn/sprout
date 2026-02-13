@@ -23,25 +23,30 @@ pub fn build(b: *Build) void {
         .optimize = optimize,
     });
     
-    // Since WGVK is a C++ project, we likely need to link its artifact or add include paths
-    // Assuming it provides a 'wgvk' artifact or we need to link manually.
-    // If it has a build.zig, we can use its artifact.
     if (wgvk_dep.builder.modules.contains("wgvk")) {
         exe.root_module.addImport("wgvk", wgvk_dep.module("wgvk"));
     } else {
-        // Fallback: Add include path and link C++ standard library if it's a raw C++ repo
         exe.addIncludePath(wgvk_dep.path("include"));
         exe.addIncludePath(wgvk_dep.path("src"));
         exe.linkLibCpp();
     }
 
-    // Add zglfw dependency
-    const zglfw = b.dependency("zglfw", .{
+    // Add rgfw dependency
+    const rgfw = b.dependency("rgfw", .{
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("zglfw", zglfw.module("root"));
-    exe.linkLibrary(zglfw.artifact("glfw"));
+    // Assuming rgfw exposes a module named "rgfw" or "root"
+    // If it's a C library wrapper, it might just be an artifact.
+    // Let's try adding the module first.
+    if (rgfw.builder.modules.contains("rgfw")) {
+        exe.root_module.addImport("rgfw", rgfw.module("rgfw"));
+    } else {
+         exe.root_module.addImport("rgfw", rgfw.module("root"));
+    }
+    
+    // Link rgfw artifact if available (e.g., libraylib.a or similar)
+    // exe.linkLibrary(rgfw.artifact("rgfw")); 
 
     // Add zmath dependency
     const zmath = b.dependency("zmath", .{

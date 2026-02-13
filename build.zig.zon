@@ -13,9 +13,9 @@
             .url = "git+https://github.com/manuel5975p/WGVK#master",
             .hash = "WGVK-0.0.1-toLO5VlCWwGHAg-zrxwOhuHlUQCYvfEO0bFmHr-aWIOD"
         },
-        .zglfw = .{
-            .url = "https://github.com/zig-gamedev/zglfw/archive/feeeff9386dd44ba2c18488113023865c41b80a4.tar.gz",
-            .hash = "zglfw-0.10.0-dev-zgVDNLyhIQCZR_rbIf7hnCKuifzcmPOLOQhd_hrqq8cl",
+        .rgfw = .{
+            .url = "git+https://github.com/ColleagueRiley/RGFW#main",
+            .hash = "N-V-__8AAMrqQAD29KsiUvwPRY8lJAU9IOjiYhwPgRjiMKfb"
         },
         .zmath = .{
             .url = "https://github.com/zig-gamedev/zmath/archive/dafbb72d71237ab8fb364555193b7eb7fb958a29.tar.gz",
