@@ -17,9 +17,5 @@
             .url = "git+https://github.com/ColleagueRiley/RGFW#main",
             .hash = "N-V-__8AAMrqQAD29KsiUvwPRY8lJAU9IOjiYhwPgRjiMKfb"
         },
-        // .zmath = .{
-        //     .url = "https://github.com/zig-gamedev/zmath/archive/dafbb72d71237ab8fb364555193b7eb7fb958a29.tar.gz",
-        //     .hash = "zmath-0.11.0-dev-wjwivU8rAwD1vxlEofaYUPQv58qalTVNJUz9Mekvw56B",
-        // },
     },
 }

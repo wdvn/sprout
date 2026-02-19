@@ -39,13 +39,9 @@ pub fn build(b: *Build) void {
     exe.addIncludePath(rgfw_dep.path("")); // RGFW.h is at the root
     exe.addCSourceFile(.{ .file = b.path("src/rgfw_impl.c"), .flags = &.{"-std=c99"} });
     exe.linkSystemLibrary("X11"); // RGFW on Linux needs X11
+    exe.linkSystemLibrary("Xrandr"); // Fix for XRRGetScreenResourcesCurrent
 
-    // // Add zmath dependency
-    // const zmath = b.dependency("zmath", .{
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    // exe.root_module.addImport("zmath", zmath.module("root"));
+    // zmath dependency removed
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
