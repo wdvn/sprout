@@ -36,10 +36,9 @@ pub fn main() !void {
     std.debug.print("Starting NVRHI Triangle Render...\n", .{});
 
     while (c.RGFW_window_shouldClose(window) == 0) {
-        while (c.RGFW_window_checkEvent(window) != null) {}
-
+        // while (c.RGFW_window_checkEvent(window) != null) {}
         nvrhi_wrapper.nvrhi_render(nvrhi_state);
 
-        std.time.sleep(16 * 1000 * 1000);
+        std.Thread.sleep(16 * 1000 * 1000);
     }
 }

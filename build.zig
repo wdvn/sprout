@@ -9,6 +9,9 @@ pub fn build(b: *Build) void {
     const libs_mod = b.addModule("libs", .{ .root_source_file = b.path("./src/libs/mod.zig") });
     const exe = b.addExecutable(.{ .name = "luynt", .root_module = main_module });
 
+    // Add src to include paths for @cImport to find local headers
+    exe.addIncludePath(b.path("src/cpp"));
+
     const string = b.dependency("string", .{
         .target = target,
         .optimize = optimize,
@@ -23,13 +26,11 @@ pub fn build(b: *Build) void {
         .optimize = optimize,
     });
     exe.addIncludePath(nvrhi_dep.path("include"));
-    exe.addIncludePath(nvrhi_dep.path("src/vulkan"));
 
     const nvrhi_sources = &.{
         "src/common/misc.cpp",
         "src/common/state-tracking.cpp",
         "src/vulkan/vulkan-allocator.cpp",
-        "src/vulkan/vulkan-backend.h",
         "src/vulkan/vulkan-buffer.cpp",
         "src/vulkan/vulkan-commandlist.cpp",
         "src/vulkan/vulkan-compute.cpp",
@@ -53,9 +54,6 @@ pub fn build(b: *Build) void {
             .file = nvrhi_dep.path(source_file),
             .flags = &.{
                 "-std=c++17",
-                "-fno-elide-type", // Shows full types
-                "-ftemplate-backtrace-limit=5", // Limits C++ template recursion logs
-                "-fmax-errors=3",
             },
             .language = .cpp, // Explicitly set language to C++
         });
@@ -63,25 +61,13 @@ pub fn build(b: *Build) void {
 
     // Add the C++ wrapper for NVRHI
     exe.addCSourceFile(.{
-        .file = b.path("src/nvrhi_impl.cpp"),
+        .file = b.path("src/cpp/nvrhi_impl.cpp"),
         .flags = &.{
             "-std=c++17",
-            "-fno-elide-type", // Shows full types
-            "-ftemplate-backtrace-limit=5", // Limits C++ template recursion logs
-            "-fmax-errors=3",
         },
         .language = .cpp, // Explicitly set language to C++
     });
-    exe.addCSourceFile(.{
-        .file = b.path("src/nvrhi_impl.h"),
-        .flags = &.{
-            "-std=c++17",
-            "-fno-elide-type", // Shows full types
-            "-ftemplate-backtrace-limit=5", // Limits C++ template recursion logs
-            "-fmax-errors=3",
-        },
-        .language = .cpp, // Explicitly set language to C++
-    });
+
     exe.linkLibCpp();
     exe.linkSystemLibrary("vulkan");
 
@@ -91,7 +77,7 @@ pub fn build(b: *Build) void {
         .optimize = optimize,
     });
     exe.addIncludePath(rgfw_dep.path("")); // RGFW.h is at the root
-    exe.addCSourceFile(.{ .file = b.path("src/rgfw_impl.c"), .flags = &.{"-std=c99"} });
+    exe.addCSourceFile(.{ .file = b.path("src/cpp/rgfw_impl.c"), .flags = &.{"-std=c99"} });
     exe.linkSystemLibrary("X11"); // RGFW on Linux needs X11
     exe.linkSystemLibrary("Xrandr"); // Fix for XRRGetScreenResourcesCurrent
 
