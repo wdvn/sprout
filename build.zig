@@ -26,6 +26,8 @@ pub fn build(b: *Build) void {
         .optimize = optimize,
     });
     exe.addIncludePath(nvrhi_dep.path("include"));
+    // Add src to include paths so NVRHI internal headers (like vulkan-backend.h) can be found
+    exe.addIncludePath(nvrhi_dep.path("src"));
 
     const nvrhi_sources = &.{
         "src/common/misc.cpp",
@@ -80,6 +82,7 @@ pub fn build(b: *Build) void {
     exe.addCSourceFile(.{ .file = b.path("src/cpp/rgfw_impl.c"), .flags = &.{"-std=c99"} });
     exe.linkSystemLibrary("X11"); // RGFW on Linux needs X11
     exe.linkSystemLibrary("Xrandr"); // Fix for XRRGetScreenResourcesCurrent
+    exe.linkSystemLibrary("Xcursor"); // Fix for Xcursor header not found
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
