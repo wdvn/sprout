@@ -7,15 +7,15 @@
     .dependencies = .{
         .string = .{
             .url = "https://github.com/JakubSzark/zig-string/archive/refs/heads/master.tar.gz",
-            .hash = "zig_string-0.10.0-6dpLWiqYAABQXLFx0hN20t4jyUobmRgL5RAJgDqWTGL4",
+            .hash = "zig_string-0.10.0-6dpLWvWcAAD1wSd3dgAqAtOC-VA1aHx6pn2VuNy4ndzI",
         },
-        .wgvk = .{
-            .url = "git+https://github.com/manuel5975p/WGVK#master",
-            .hash = "WGVK-0.0.1-toLO5VlCWwGHAg-zrxwOhuHlUQCYvfEO0bFmHr-aWIOD"
+        .nvrhi = .{
+            .url = "git+https://github.com/NVIDIAGameWorks/nvrhi#main",
+            .hash = "N-V-__8AAI5SGgAuDDsuuZtN7VlVIg7Vu-Hv9UpCwllbZIyn",
         },
         .rgfw = .{
             .url = "git+https://github.com/ColleagueRiley/RGFW#main",
-            .hash = "N-V-__8AAMrqQAD29KsiUvwPRY8lJAU9IOjiYhwPgRjiMKfb"
+            .hash = "N-V-__8AAF7rQAAZuZbVy9ci5AdvCWMERs5ys034PZrLth2e"
         },
     },
 }
