@@ -11,11 +11,16 @@
         },
         .nvrhi = .{
             .url = "git+https://github.com/NVIDIAGameWorks/nvrhi#main",
-            .hash = "N-V-__8AAI5SGgAuDDsuuZtN7VlVIg7Vu-Hv9UpCwllbZIyn",
+            .hash = "N-V-__8AAL9SGgBQQ9oVMT7ckACxoDmHX76PHJzkC_kzch5X",
         },
         .rgfw = .{
             .url = "git+https://github.com/ColleagueRiley/RGFW#main",
-            .hash = "N-V-__8AAF7rQAAZuZbVy9ci5AdvCWMERs5ys034PZrLth2e"
+            .hash = "N-V-__8AAFzrQAB2s4wP4MxqJZwks9C19fnQHwS-L1A0pnvr"
+        },
+        .vma = .{
+            .name = "vma",
+            .url = "git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator#master",
+            .hash = "N-V-__8AAEQTPwCBpcfOoQPJ-G1anGhST2Wk5Okcs5xHa25w",
         },
     },
 }

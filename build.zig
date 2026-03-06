@@ -20,58 +20,17 @@ pub fn build(b: *Build) void {
 
     exe.root_module.addImport("libs", libs_mod);
 
-    // Add NVRHI dependency (C++ project)
-    const nvrhi_dep = b.dependency("nvrhi", .{
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.addIncludePath(nvrhi_dep.path("include"));
-    // Add src to include paths so NVRHI internal headers (like vulkan-backend.h) can be found
-    exe.addIncludePath(nvrhi_dep.path("src"));
-
-    const nvrhi_sources = &.{
-        "src/common/misc.cpp",
-        "src/common/state-tracking.cpp",
-        "src/vulkan/vulkan-allocator.cpp",
-        "src/vulkan/vulkan-buffer.cpp",
-        "src/vulkan/vulkan-commandlist.cpp",
-        "src/vulkan/vulkan-compute.cpp",
-        "src/vulkan/vulkan-constants.cpp",
-        "src/vulkan/vulkan-device.cpp",
-        "src/vulkan/vulkan-graphics.cpp",
-        "src/vulkan/vulkan-meshlets.cpp",
-        "src/vulkan/vulkan-queries.cpp",
-        "src/vulkan/vulkan-queue.cpp",
-        "src/vulkan/vulkan-raytracing.cpp",
-        "src/vulkan/vulkan-resource-bindings.cpp",
-        "src/vulkan/vulkan-shader.cpp",
-        "src/vulkan/vulkan-staging-texture.cpp",
-        "src/vulkan/vulkan-state-tracking.cpp",
-        "src/vulkan/vulkan-texture.cpp",
-        "src/vulkan/vulkan-upload.cpp",
-    };
-
-    inline for (nvrhi_sources) |source_file| {
-        exe.addCSourceFile(.{
-            .file = nvrhi_dep.path(source_file),
-            .flags = &.{
-                "-std=c++17",
-            },
-            .language = .cpp, // Explicitly set language to C++
-        });
-    }
-
-    // Add the C++ wrapper for NVRHI
+    // Add the C++ wrapper implementation used by Zig.
+    // This is intentionally self-contained for Zig 0.15.2 build/run stability.
     exe.addCSourceFile(.{
         .file = b.path("src/cpp/nvrhi_impl.cpp"),
         .flags = &.{
             "-std=c++17",
         },
-        .language = .cpp, // Explicitly set language to C++
+        .language = .cpp,
     });
 
     exe.linkLibCpp();
-    exe.linkSystemLibrary("vulkan");
 
     // Add RGFW dependency (C single-header library)
     const rgfw_dep = b.dependency("rgfw", .{
