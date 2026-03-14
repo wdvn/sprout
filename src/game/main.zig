@@ -23,17 +23,17 @@ const stone_vertices = [_]f32{
     0.0, 0.0,
 };
 
-fn event(e: *const app.Event) callconv(.c) void {
+fn event(e: [*c]const app.Event) callconv(.c) void {
     if (g.winner != null) {
-        if (e.type == .KEY_DOWN and e.key_code == .SPACE) {
+        if (e.*.type == .KEY_DOWN and e.*.key_code == .SPACE) {
             g = game.Gomoku.init();
         }
         return;
     }
 
-    if (e.type == .MOUSE_BUTTON_DOWN) {
-        const x = e.mouse_x;
-        const y = e.mouse_y;
+    if (e.*.type == .MOUSE_DOWN) {
+        const x = e.*.mouse_x;
+        const y = e.*.mouse_y;
         const width = app.widthf();
         const height = app.heightf();
         const col = @floor((x / width) * 15);
@@ -54,13 +54,13 @@ fn init() callconv(.c) void {
     g = game.Gomoku.init();
     var desc = std.mem.zeroes(gfx.Desc);
     desc.environment = glue.environment();
-    gfx.setup(&desc);
+    gfx.setup(desc);
 
     // line pipeline
     var line_vbuf_desc = std.mem.zeroes(gfx.BufferDesc);
     line_vbuf_desc.data = gfx.asRange(&line_vertices);
     line_vbuf_desc.label = "lines-vertices";
-    line_bind.vertex_buffers[0] = gfx.makeBuffer(&line_vbuf_desc);
+    line_bind.vertex_buffers[0] = gfx.makeBuffer(line_vbuf_desc);
 
     var line_shd_desc = std.mem.zeroes(gfx.ShaderDesc);
     line_shd_desc.vertex_func.source = 
@@ -77,20 +77,20 @@ fn init() callconv(.c) void {
         \\    frag_color = vec4(0.0, 0.0, 0.0, 1.0);
         \\}
     ;
-    line_shd_desc.attrs[0].name = "position";
-    const line_shd = gfx.makeShader(&line_shd_desc);
+    line_shd_desc.attrs[0].glsl_name = "position";
+    const line_shd = gfx.makeShader(line_shd_desc);
 
     var line_pip_desc = std.mem.zeroes(gfx.PipelineDesc);
     line_pip_desc.shader = line_shd;
     line_pip_desc.layout.attrs[0].format = .FLOAT2;
     line_pip_desc.primitive_type = .LINES;
-    line_pip = gfx.makePipeline(&line_pip_desc);
+    line_pip = gfx.makePipeline(line_pip_desc);
 
     // stone pipeline
     var stone_vbuf_desc = std.mem.zeroes(gfx.BufferDesc);
     stone_vbuf_desc.data = gfx.asRange(&stone_vertices);
     stone_vbuf_desc.label = "stone-vertices";
-    stone_bind.vertex_buffers[0] = gfx.makeBuffer(&stone_vbuf_desc);
+    stone_bind.vertex_buffers[0] = gfx.makeBuffer(stone_vbuf_desc);
 
     var stone_shd_desc = std.mem.zeroes(gfx.ShaderDesc);
     stone_shd_desc.vertex_func.source = 
@@ -115,20 +115,20 @@ fn init() callconv(.c) void {
         \\    frag_color = v_color;
         \\}
     ;
-    stone_shd_desc.attrs[0].name = "position";
+    stone_shd_desc.attrs[0].glsl_name = "position";
     
     // Define uniforms
     stone_shd_desc.uniform_blocks[0] = .{
         .stage = .VERTEX,
         .size = @sizeOf(f32) * 6,
     };
-    const stone_shd = gfx.makeShader(&stone_shd_desc);
+    const stone_shd = gfx.makeShader(stone_shd_desc);
 
     var stone_pip_desc = std.mem.zeroes(gfx.PipelineDesc);
     stone_pip_desc.shader = stone_shd;
     stone_pip_desc.layout.attrs[0].format = .FLOAT2;
     stone_pip_desc.primitive_type = .POINTS;
-    stone_pip = gfx.makePipeline(&stone_pip_desc);
+    stone_pip = gfx.makePipeline(stone_pip_desc);
 }
 
 fn frame() callconv(.c) void {
@@ -137,12 +137,12 @@ fn frame() callconv(.c) void {
     
     // draw lines
     gfx.applyPipeline(line_pip);
-    gfx.applyBindings(&line_bind);
+    gfx.applyBindings(line_bind);
     gfx.draw(0, line_vertices.len / 2, 1);
 
     // draw stones
     gfx.applyPipeline(stone_pip);
-    gfx.applyBindings(&stone_bind);
+    gfx.applyBindings(stone_bind);
     for (g.board, 0..) |row, r| {
         for (row, 0..) |cell, c| {
             if (cell != .empty) {
@@ -158,7 +158,7 @@ fn frame() callconv(.c) void {
                     .color = color,
                 };
                 
-                gfx.applyUniforms(.VERTEX, 0, &gfx.asRange(&vs_params));
+                gfx.applyUniforms(0, gfx.asRange(&vs_params));
                 gfx.draw(0, 1, 1);
             }
         }
@@ -181,5 +181,5 @@ pub fn main() !void {
     desc.width = 800;
     desc.height = 600;
     desc.window_title = "Gomoku";
-    app.run(&desc);
+    app.run(desc);
 }
