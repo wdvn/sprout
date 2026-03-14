@@ -5,22 +5,9 @@
     .fingerprint = 0x423be29f6d7c2879,
     .paths = .{"src"},
     .dependencies = .{
-        .string = .{
-            .url = "https://github.com/JakubSzark/zig-string/archive/refs/heads/master.tar.gz",
-            .hash = "zig_string-0.10.0-6dpLWvWcAAD1wSd3dgAqAtOC-VA1aHx6pn2VuNy4ndzI",
-        },
-        .nvrhi = .{
-            .url = "git+https://github.com/NVIDIAGameWorks/nvrhi#main",
-            .hash = "N-V-__8AAL9SGgBQQ9oVMT7ckACxoDmHX76PHJzkC_kzch5X",
-        },
-        .rgfw = .{
-            .url = "git+https://github.com/ColleagueRiley/RGFW#main",
-            .hash = "N-V-__8AAFzrQAB2s4wP4MxqJZwks9C19fnQHwS-L1A0pnvr"
-        },
-        .vma = .{
-            .name = "vma",
-            .url = "git+https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator#master",
-            .hash = "N-V-__8AAEQTPwCBpcfOoQPJ-G1anGhST2Wk5Okcs5xHa25w",
-        },
+        .sokol = .{
+            .url = "git+https://github.com/floooh/sokol-zig.git#de5906fb0f81f96e92c1c67a2b8a24dc50872207",
+            .hash = "sokol-0.1.0-pb1HK9ngNgD_m7L3HpbsyJ-jHRGVzcd672pjJDEPBQWh",
+        }
     },
 }
