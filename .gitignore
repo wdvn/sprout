@@ -4,3 +4,4 @@ zig-out
 dist
 main
 assets
+zig-pkg
