@@ -17,6 +17,13 @@ pub fn build(b: *Build) void {
     });
     libs.addImport("sokol", sokol.module("sokol"));
 
+    const game = b.createModule(.{
+        .root_source_file = b.path("src/game/mod.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    game.addImport("libs", libs);
+
     const sprout_exe = b.addExecutable(.{
         .name = "sprout",
         .root_module = b.createModule(.{
@@ -27,6 +34,7 @@ pub fn build(b: *Build) void {
     });
 
     sprout_exe.root_module.addImport("libs", libs);
+    sprout_exe.root_module.addImport("game", game);
     sprout_exe.root_module.addImport("sokol", sokol.module("sokol"));
     sprout_exe.root_module.linkSystemLibrary("GL", .{});
     sprout_exe.root_module.linkSystemLibrary("X11", .{});
@@ -46,6 +54,13 @@ pub fn build(b: *Build) void {
         .root_module = libs,
     });
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
+
+    const game_unit_tests = b.addTest(.{
+        .root_module = game,
+    });
+    const run_game_unit_tests = b.addRunArtifact(game_unit_tests);
+
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
+    test_step.dependOn(&run_game_unit_tests.step);
 }
