@@ -23,6 +23,7 @@ pub fn build(b: *Build) void {
         .optimize = optimize,
     });
     game.addImport("libs", libs);
+    game.addImport("sokol", sokol.module("sokol"));
 
     const sprout_exe = b.addExecutable(.{
         .name = "sprout",

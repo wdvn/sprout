@@ -53,8 +53,28 @@ pub const Dungeon = struct {
                 self.tiles[r][c] = .{
                     .kind = kind,
                     .cleared = (r == 0 and c == 0),
+                    .revealed = false,
                     .element = elem,
                 };
+            }
+        }
+
+        // Mở sương mù khu vực xuất phát và hiển thị vị trí Boss Thiên Kiếp
+        self.tiles[GRID_ROWS - 1][GRID_COLS - 1].revealed = true;
+        self.revealAround(0, 0, 1);
+    }
+
+    pub fn revealAround(self: *Dungeon, center_c: i32, center_r: i32, radius: i32) void {
+        const min_r = @max(0, center_r - radius);
+        const max_r = @min(@as(i32, @intCast(GRID_ROWS - 1)), center_r + radius);
+        const min_c = @max(0, center_c - radius);
+        const max_c = @min(@as(i32, @intCast(GRID_COLS - 1)), center_c + radius);
+
+        var r = min_r;
+        while (r <= max_r) : (r += 1) {
+            var c = min_c;
+            while (c <= max_c) : (c += 1) {
+                self.tiles[@intCast(r)][@intCast(c)].revealed = true;
             }
         }
     }
@@ -63,9 +83,10 @@ pub const Dungeon = struct {
         if (new_col < 0 or new_col >= @as(i32, @intCast(GRID_COLS))) return null;
         if (new_row < 0 or new_row >= @as(i32, @intCast(GRID_ROWS))) return null;
 
-        // Chỉ cho phép di chuyển đến các ô liền kề (Manhattan distance == 1) hoặc bất kỳ ô đã clear
         self.player_col = new_col;
         self.player_row = new_row;
+
+        self.revealAround(new_col, new_row, 1);
 
         const tile = &self.tiles[@intCast(new_row)][@intCast(new_col)];
         const kind = tile.kind;

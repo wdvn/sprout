@@ -87,14 +87,15 @@ pub const Beast = struct {
 
     /// Kiểm tra quái đã rơi vào trạng thái Máu Đỏ (HP <= 15%) chưa
     pub fn isRedHp(self: *const Beast) bool {
-        if (self.hp <= 0) return false;
-        return (self.hp * 100 / self.max_hp) <= 15;
+        if (self.hp <= 0 or self.max_hp <= 0) return false;
+        return @divTrunc(self.hp * 100, self.max_hp) <= 15;
     }
 
     /// Tính toán sát thương gây ra cho mục tiêu có xét Ngũ Hành
     pub fn calcDamageAgainst(self: *const Beast, target: *const Beast) i32 {
         const mult = self.element.multiplierAgainst(target.element);
-        const raw_damage = @as(f32, @floatFromInt(self.atk)) * mult - @as(f32, @floatFromInt(target.def * 2 / 3));
+        const def_reduction = @as(f32, @floatFromInt(@divTrunc(target.def * 2, 3)));
+        const raw_damage = @as(f32, @floatFromInt(self.atk)) * mult - def_reduction;
         const final_dmg = @max(5, @as(i32, @intFromFloat(raw_damage)));
         return final_dmg;
     }
@@ -131,5 +132,6 @@ pub const DungeonTile = struct {
 
     kind: Kind = .empty,
     cleared: bool = false,
+    revealed: bool = false, // Sương mù che phủ (Fog of War)
     element: Element = .tu, // Hệ nguyên tố chi phối ô này
 };

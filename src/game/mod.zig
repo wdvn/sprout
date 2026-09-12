@@ -3,6 +3,8 @@ pub const components = @import("components.zig");
 pub const beasts = @import("beasts.zig");
 pub const battle = @import("battle.zig");
 pub const dungeon = @import("dungeon.zig");
+pub const renderer = @import("renderer.zig");
+pub const audio = @import("audio.zig");
 
 pub const Element = types.Element;
 pub const Rarity = types.Rarity;

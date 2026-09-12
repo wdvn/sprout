@@ -24,7 +24,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
     };
     switch (preset) {
         .bich_thuy_quy => {
-            b.setName("Bích Thủy Quy");
+            b.setName("BICH THUY QUY");
             b.element = .shui;
             b.rarity = .monster;
             b.hp = 180;
@@ -36,7 +36,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 35;
         },
         .hoa_diem_ho => {
-            b.setName("Hỏa Diễm Hồ");
+            b.setName("HOA DIEM HO");
             b.element = .huo;
             b.rarity = .monster;
             b.hp = 110;
@@ -48,7 +48,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 58;
         },
         .linh_moc_dieu => {
-            b.setName("Linh Mộc Điểu");
+            b.setName("LINH MOC DIEU");
             b.element = .mu;
             b.rarity = .monster;
             b.hp = 95;
@@ -60,7 +60,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 65;
         },
         .kim_giap_ho => {
-            b.setName("Kim Giáp Hổ");
+            b.setName("KIM GIAP HO");
             b.element = .jin;
             b.rarity = .rare;
             b.hp = 150;
@@ -72,7 +72,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 48;
         },
         .u_minh_xa => {
-            b.setName("U Minh Xà");
+            b.setName("U MINH XA");
             b.element = .yin;
             b.rarity = .rare;
             b.hp = 105;
@@ -84,7 +84,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 62;
         },
         .xich_hoa_lang => {
-            b.setName("Xích Hỏa Lang");
+            b.setName("XICH HOA LANG");
             b.element = .huo;
             b.rarity = .mortal;
             b.hp = 70;
@@ -96,7 +96,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 45;
         },
         .hoang_tho_hung => {
-            b.setName("Hoàng Thổ Hùng");
+            b.setName("HOANG THO HUNG");
             b.element = .tu;
             b.rarity = .monster;
             b.hp = 120;
@@ -108,7 +108,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 30;
         },
         .loi_dien_dieu => {
-            b.setName("Lôi Điện Điêu");
+            b.setName("LOI DIEN DIEU");
             b.element = .jin;
             b.rarity = .rare;
             b.hp = 90;
@@ -120,7 +120,7 @@ pub fn createBeast(preset: Preset, is_wild: bool) Beast {
             b.speed = 70;
         },
         .thanh_long => {
-            b.setName("Thanh Long Cổ Thần");
+            b.setName("THANH LONG");
             b.element = .yang;
             b.rarity = .legendary;
             b.hp = 300;

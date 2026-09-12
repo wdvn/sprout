@@ -22,6 +22,18 @@ pub const Element = enum(u8) {
         };
     }
 
+    pub fn asciiName(self: Element) []const u8 {
+        return switch (self) {
+            .jin => "KIM",
+            .mu => "MOC",
+            .shui => "THUY",
+            .huo => "HOA",
+            .tu => "THO",
+            .yin => "AM",
+            .yang => "DUONG",
+        };
+    }
+
     /// Trả về màu sắc đại diện RGBA [0..1]
     pub fn color(self: Element) [4]f32 {
         return switch (self) {
@@ -82,6 +94,15 @@ pub const Rarity = enum(u8) {
         };
     }
 
+    pub fn asciiName(self: Rarity) []const u8 {
+        return switch (self) {
+            .mortal => "PHAM THU",
+            .monster => "YEU THU",
+            .rare => "DI CHUNG",
+            .legendary => "THAN THU",
+        };
+    }
+
     pub fn color(self: Rarity) [4]f32 {
         return switch (self) {
             .mortal => .{ 0.65, 0.65, 0.65, 1.0 },    // Xám trắng
@@ -119,6 +140,16 @@ pub const Realm = enum(u8) {
         };
     }
 
+    pub fn asciiName(self: Realm) []const u8 {
+        return switch (self) {
+            .qi_refining => "LUYEN KHI KY",
+            .foundation => "TRUC CO KY",
+            .golden_core => "KIM DAN KY",
+            .nascent_soul => "NGUYEN ANH KY",
+            .spirit_severing => "HOA THAN KY",
+        };
+    }
+
     pub fn requiredExp(self: Realm) u32 {
         return switch (self) {
             .qi_refining => 100,
@@ -143,6 +174,15 @@ pub const MasterSkill = enum(u8) {
             .frenzy_talisman => "Cuồng Bạo Phù",
             .purify_mantra => "Thanh Tâm Chú",
             .taming_art => "Thu Phục Thuật",
+        };
+    }
+
+    pub fn asciiName(self: MasterSkill) []const u8 {
+        return switch (self) {
+            .shield_array => "HO THAN TRAN",
+            .frenzy_talisman => "CUONG BAO PHU",
+            .purify_mantra => "THANH TAM CHU",
+            .taming_art => "THU PHUC THUAT",
         };
     }
 };
@@ -171,6 +211,15 @@ pub const TamingOrderType = enum(u8) {
             .chaos => "Hỗn Độn Ngự Thú Lệnh",
         };
     }
+
+    pub fn asciiName(self: TamingOrderType) []const u8 {
+        return switch (self) {
+            .mortal => "HA PHAM NGU THU LENH",
+            .iron => "HUYEN THIET NGU THU LENH",
+            .gold => "TU KIM NGU THU LENH",
+            .chaos => "HON DON NGU THU LENH",
+        };
+    }
 };
 
 test "Elemental combat multiplier" {
@@ -183,4 +232,6 @@ test "Elemental combat multiplier" {
     try std.testing.expectEqual(@as(f32, 2.0), Element.yang.multiplierAgainst(.yin));
     // Cùng hệ bình thường
     try std.testing.expectEqual(@as(f32, 1.0), Element.huo.multiplierAgainst(.huo));
+
+
 }

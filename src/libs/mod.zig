@@ -6,6 +6,9 @@ pub const ecs = @import("ecs.zig");
 pub const Registry = ecs.Registry;
 pub const Entity = ecs.Entity;
 
+pub const microui = @import("microui/root.zig");
+pub const mui = microui;
+
 test {
     std.testing.refAllDecls(@This());
 }

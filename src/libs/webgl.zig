@@ -524,7 +524,7 @@ pub const WebGLRenderingContext = struct {
         }
     }
 
-    fn ensurePass(self: *WebGLRenderingContext) void {
+    pub fn ensurePass(self: *WebGLRenderingContext) void {
         if (!self.in_pass) {
             sg.beginPass(.{
                 .action = self.pass_action,
@@ -766,6 +766,7 @@ pub fn blendFunc(sfactor: u32, dfactor: u32) void { default_context.blendFunc(sf
 
 pub fn drawArrays(mode: u32, first: i32, count: i32) void { default_context.drawArrays(mode, first, count); }
 pub fn drawElements(mode: u32, count: i32, type_: u32, offset: usize) void { default_context.drawElements(mode, count, type_, offset); }
+pub fn ensurePass() void { default_context.ensurePass(); }
 pub fn present() void { default_context.present(); }
 
 
