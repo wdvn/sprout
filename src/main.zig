@@ -197,12 +197,21 @@ const quad_fs_source =
     \\
     \\    vec2 p = v_uv * half_size;
     \\
-    \\    // 1. Chế độ đổ bóng mờ (Drop Shadow)
+    \\    // 1. Chế độ đổ bóng mờ đa tầng (Tailwind Soft Drop Shadow)
     \\    if (is_shadow > 0.5) {
-    \\        float s_dist = sdRoundBox(p, half_size - vec2(2.0), radius + 2.0);
-    \\        float s_alpha = smoothstep(12.0, -2.0, s_dist) * u_color.a;
-    \\        if (s_alpha <= 0.001) discard;
-    \\        frag_color = vec4(0.0, 0.0, 0.0, s_alpha);
+    \\        // Key shadow (lệch trục Y tạo chiều sâu nổi khối)
+    \\        vec2 p1 = p - vec2(0.0, 8.0);
+    \\        float dist1 = sdRoundBox(p1, half_size - vec2(2.0), radius + 2.0);
+    \\        float a1 = smoothstep(18.0, -2.0, dist1) * 0.45;
+    \\
+    \\        // Ambient shadow (đổ bóng sát chân viền tạo độ tương phản cao)
+    \\        vec2 p2 = p - vec2(0.0, 2.0);
+    \\        float dist2 = sdRoundBox(p2, half_size, radius);
+    \\        float a2 = smoothstep(6.0, -1.0, dist2) * 0.35;
+    \\
+    \\        float total_alpha = clamp(a1 + a2, 0.0, 1.0) * u_color.a;
+    \\        if (total_alpha <= 0.002) discard;
+    \\        frag_color = vec4(0.0, 0.0, 0.0, total_alpha);
     \\        return;
     \\    }
     \\
@@ -225,9 +234,9 @@ const quad_fs_source =
     \\        fill.rgb += vec3(sheen);
     \\    }
     \\
-    \\    // Viền khung
-    \\    float border_dist = dist + border_w;
-    \\    float border_factor = smoothstep(-0.8, 0.5, border_dist);
+    \\    // Viền khung sắc nét sub-pixel
+    \\    float border_dist = abs(dist + border_w * 0.5) - border_w * 0.5;
+    \\    float border_factor = 1.0 - smoothstep(0.0, 1.2, border_dist);
     \\
     \\    vec4 border_col = u_border_color;
     \\    if (glow > 0.0) {
@@ -1533,20 +1542,24 @@ fn buildAndRenderXmlUI() void {
     // 3. Render Avatars/Images chân dung Linh Thú & Tu Sĩ
     xml_ui.ui_state.renderImages(drawModernRect, drawUiTexture);
 
-    // 4. Render texts
-    renderer.beginTextUi();
-    xml_ui.ui_state.renderTexts(renderer.drawTextClean);
+    // 4. Render texts bằng Font Atlas UTF-8 sắc nét
+    xml_ui.ui_state.renderTexts(renderer.drawUtf8Text);
     renderFloatingTexts();
-    renderer.endTextUi();
 }
 
 fn renderFloatingTexts() void {
     for (&state.floating_texts) |*ft| {
         if (ft.active) {
-            const col = renderer.ndcToCharCol(ft.x);
-            const row = renderer.ndcToCharRow(ft.y);
             const len = std.mem.indexOfScalar(u8, &ft.text, 0) orelse ft.text.len;
-            renderer.drawTextClean(col, row, ft.text[0..len], ft.r, ft.g, ft.b);
+            const px_x = ((ft.x + 1.0) * 0.5) * 960.0;
+            const px_y = ((1.0 - ft.y) * 0.5) * 760.0;
+            const color = [4]f32{
+                @as(f32, @floatFromInt(ft.r)) / 255.0,
+                @as(f32, @floatFromInt(ft.g)) / 255.0,
+                @as(f32, @floatFromInt(ft.b)) / 255.0,
+                1.0,
+            };
+            renderer.drawUtf8Text(ft.text[0..len], px_x, px_y, 16.0, color);
         }
     }
 }

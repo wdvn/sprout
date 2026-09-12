@@ -1053,8 +1053,8 @@ pub const UIState = struct {
         }
     }
 
-    /// Render tất cả tiêu đề, nhãn text, chỉ số HP và chữ trên nút bằng Sokol debugtext
-    pub fn renderTexts(self: *UIState, draw_text: anytype) void {
+    /// Render tất cả tiêu đề, nhãn text, chỉ số HP và chữ trên nút bằng Font Atlas UTF-8 sắc nét
+    pub fn renderTexts(self: *UIState, draw_utf8: anytype) void {
         for (0..self.node_count) |i| {
             const n = &self.nodes[i];
             if (n.tag != .text and (n.rect.w <= 0.0 or n.rect.h <= 0.0)) continue;
@@ -1062,40 +1062,37 @@ pub const UIState = struct {
             switch (n.tag) {
                 .window, .panel, .slot => {
                     if (n.title_len > 0) {
-                        const col = (n.rect.x + 8.0) / 8.0;
-                        const row = (n.rect.y + 6.0) / 8.0;
-                        draw_text(col, row, n.title[0..n.title_len], 255, 215, 60);
+                        const font_sz: f32 = 14.0;
+                        const tx = n.rect.x + 10.0;
+                        const ty = n.rect.y + 5.0;
+                        draw_utf8(n.title[0..n.title_len], tx, ty, font_sz, .{ 1.0, 0.85, 0.25, 1.0 });
                     }
                 },
 
                 .button => {
                     if (n.text_len > 0) {
-                        const col = (n.rect.x + 8.0) / 8.0;
-                        const row = (n.rect.y + (n.rect.h - 8.0) * 0.5) / 8.0;
-                        const r: u8 = @intFromFloat(std.math.clamp(n.text_color[0] * 255.0, 0.0, 255.0));
-                        const g: u8 = @intFromFloat(std.math.clamp(n.text_color[1] * 255.0, 0.0, 255.0));
-                        const b: u8 = @intFromFloat(std.math.clamp(n.text_color[2] * 255.0, 0.0, 255.0));
-                        draw_text(col, row, n.text[0..n.text_len], r, g, b);
+                        const font_sz = if (n.font_size > 0.0) n.font_size else 14.0;
+                        const approx_w = @as(f32, @floatFromInt(n.text_len)) * (font_sz * 0.52);
+                        const tx = n.rect.x + @max(4.0, (n.rect.w - approx_w) * 0.5);
+                        const ty = n.rect.y + @max(0.0, (n.rect.h - font_sz) * 0.5) - 2.0;
+                        draw_utf8(n.text[0..n.text_len], tx, ty, font_sz, n.text_color);
                     }
                 },
 
                 .text => {
                     if (n.text_len > 0) {
-                        const col = n.rect.x / 8.0;
-                        const row = n.rect.y / 8.0;
-                        const r: u8 = @intFromFloat(std.math.clamp(n.text_color[0] * 255.0, 0.0, 255.0));
-                        const g: u8 = @intFromFloat(std.math.clamp(n.text_color[1] * 255.0, 0.0, 255.0));
-                        const b: u8 = @intFromFloat(std.math.clamp(n.text_color[2] * 255.0, 0.0, 255.0));
-                        draw_text(col, row, n.text[0..n.text_len], r, g, b);
+                        const font_sz = if (n.font_size > 0.0) n.font_size else 14.0;
+                        draw_utf8(n.text[0..n.text_len], n.rect.x, n.rect.y, font_sz, n.text_color);
                     }
                 },
 
                 .progress_bar => {
                     if (n.label_len > 0) {
-                        const str_w = @as(f32, @floatFromInt(n.label_len)) * 8.0;
-                        const col = (n.rect.x + @max(0.0, (n.rect.w - str_w) * 0.5)) / 8.0;
-                        const row = (n.rect.y + (n.rect.h - 8.0) * 0.5) / 8.0;
-                        draw_text(col, row, n.label[0..n.label_len], 255, 255, 255);
+                        const font_sz: f32 = 12.0;
+                        const approx_w = @as(f32, @floatFromInt(n.label_len)) * (font_sz * 0.52);
+                        const tx = n.rect.x + @max(2.0, (n.rect.w - approx_w) * 0.5);
+                        const ty = n.rect.y + @max(0.0, (n.rect.h - font_sz) * 0.5) - 2.0;
+                        draw_utf8(n.label[0..n.label_len], tx, ty, font_sz, .{ 1.0, 1.0, 1.0, 1.0 });
                     }
                 },
 

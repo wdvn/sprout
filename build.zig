@@ -24,7 +24,11 @@ pub fn build(b: *Build) void {
     });
     game.addImport("libs", libs);
     game.addImport("sokol", sokol.module("sokol"));
+    game.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+    game.addLibraryPath(b.path("deps/lib"));
     game.linkSystemLibrary("sqlite3", .{});
+    game.linkSystemLibrary("freetype", .{});
+    game.linkSystemLibrary("harfbuzz", .{});
 
     const sprout_exe = b.addExecutable(.{
         .name = "sprout",
@@ -39,9 +43,13 @@ pub fn build(b: *Build) void {
     sprout_exe.root_module.addImport("game", game);
     sprout_exe.root_module.addImport("sokol", sokol.module("sokol"));
     // Clay layout engine integration deferred (no C linking needed for stub implementation)
+    sprout_exe.root_module.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+    sprout_exe.root_module.addLibraryPath(b.path("deps/lib"));
     sprout_exe.root_module.linkSystemLibrary("GL", .{});
     sprout_exe.root_module.linkSystemLibrary("X11", .{});
     sprout_exe.root_module.linkSystemLibrary("sqlite3", .{});
+    sprout_exe.root_module.linkSystemLibrary("freetype", .{});
+    sprout_exe.root_module.linkSystemLibrary("harfbuzz", .{});
 
     b.installArtifact(sprout_exe);
 
@@ -62,7 +70,11 @@ pub fn build(b: *Build) void {
     const game_unit_tests = b.addTest(.{
         .root_module = game,
     });
+    game_unit_tests.root_module.addIncludePath(.{ .cwd_relative = "/usr/include/freetype2" });
+    game_unit_tests.root_module.addLibraryPath(b.path("deps/lib"));
     game_unit_tests.root_module.linkSystemLibrary("sqlite3", .{});
+    game_unit_tests.root_module.linkSystemLibrary("freetype", .{});
+    game_unit_tests.root_module.linkSystemLibrary("harfbuzz", .{});
     const run_game_unit_tests = b.addRunArtifact(game_unit_tests);
 
     const test_step = b.step("test", "Run unit tests");
