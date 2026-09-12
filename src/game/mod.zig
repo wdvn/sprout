@@ -8,6 +8,7 @@ pub const audio = @import("audio.zig");
 pub const db = @import("db.zig");
 pub const xml_ui = @import("xml_ui.zig");
 pub const typography = @import("typography.zig");
+pub const arena = @import("arena.zig");
 
 pub const Element = types.Element;
 pub const Rarity = types.Rarity;
@@ -36,5 +37,6 @@ test {
     _ = dungeon;
     _ = db;
     _ = xml_ui;
+    _ = arena;
 }
 

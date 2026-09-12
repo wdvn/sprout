@@ -1419,7 +1419,7 @@ pub fn parseXmlUI(xml_content: []const u8, state: *UIState, data_resolver: anyty
     state.computeTreeLayout();
 }
 
-var temp_resolved_buf: [256]u8 = undefined;
+var temp_resolved_buf: [512]u8 = undefined;
 
 /// Hỗ trợ cả {key} đơn thuần lẫn nội suy chuỗi và giải mã thực thể XML (&amp;, &lt;, &gt;, &quot;)
 pub fn resolveDataBinding(val: []const u8, resolver: anytype) []const u8 {
@@ -1458,7 +1458,7 @@ pub fn resolveDataBinding(val: []const u8, resolver: anytype) []const u8 {
             const end_opt = std.mem.indexOfScalarPos(u8, val, start, '}');
             if (end_opt) |end| {
                 const key = val[start..end];
-                var single_buf: [96]u8 = undefined;
+                var single_buf: [384]u8 = undefined;
                 if (resolver(key, &single_buf)) |res| {
                     const c_len = @min(res.len, temp_resolved_buf.len - out_idx);
                     @memcpy(temp_resolved_buf[out_idx .. out_idx + c_len], res[0..c_len]);

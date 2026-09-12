@@ -18,6 +18,7 @@ const renderer = game.renderer;
 const audio = game.audio;
 const db = game.db;
 const xml_ui = game.xml_ui;
+const arena = game.arena;
 const TextureId = renderer.TextureId;
 
 const party_xml_bytes = @embedFile("assets/ui/party.xml");
@@ -92,6 +93,8 @@ pub const GameState = struct {
     wild_beast_entity: ?ecs.Entity = null,
 
     dungeon_world: Dungeon = undefined,
+    arena_state: arena.ArenaState = arena.ArenaState.init(),
+    arena_target_idx: ?u8 = null,
     mode: GameMode = .dungeon_map,
 
     prng: std.Random.DefaultPrng = undefined,
@@ -333,6 +336,15 @@ fn getBeastIcon(beast: *const Beast) []const u8 {
     };
 }
 
+fn getBeastTextureId(b: *const Beast) TextureId {
+    const icon_str = getBeastIcon(b);
+    if (std.mem.eql(u8, icon_str, "turtle")) return .turtle;
+    if (std.mem.eql(u8, icon_str, "fox")) return .fox;
+    if (std.mem.eql(u8, icon_str, "bird")) return .bird;
+    if (std.mem.eql(u8, icon_str, "dragon")) return .dragon;
+    return .fox;
+}
+
 
 /// Vẽ một panel UI chữ nhật theo tọa độ cột và dòng của sdtx
 fn drawPanel(c_start: f32, c_end: f32, r_start: f32, r_end: f32, bg: [4]f32, border: [4]f32) void {
@@ -486,12 +498,418 @@ fn enterBattle(is_boss: bool) void {
     state.registry.add(wild_ent, wild_beast) catch {};
     state.wild_beast_entity = wild_ent;
 
+    // Khởi tạo sàn đấu Wandering Sword 8x5
+    state.arena_state = arena.ArenaState.init();
+
+    // 1. Thêm Tu Sĩ (Tiểu Phàm) vào vị trí (1, 2)
+    const master = state.registry.get(state.master_entity, CultivatorMaster);
+    var master_unit = arena.ArenaUnit{
+        .entity = state.master_entity,
+        .is_player_side = true,
+        .icon_id = .player,
+        .col = 1,
+        .row = 2,
+        .facing = .right,
+        .move_range = 3,
+        .speed = 50,
+        .hp = 120,
+        .max_hp = 120,
+        .atk = 28,
+        .def = 14,
+        .element = .tu,
+    };
+    if (master) |m| {
+        master_unit.setName(m.name[0..m.name_len]);
+    } else {
+        master_unit.setName("Tiểu Phàm");
+    }
+    master_unit.addSkill(arena.TacticalSkill.init("Thương Long Kiếm", .melee_single, 1, 35, 0, 0, .tu));
+    master_unit.addSkill(arena.TacticalSkill.init("Ngự Kiếm Xuyên", .line_pierce, 3, 45, 0, 0, .jin));
+    master_unit.addSkill(arena.TacticalSkill.init("Vạn Kiếm Quy", .ranged_aoe, 2, 40, 0, 0, .jin));
+    master_unit.addSkill(arena.TacticalSkill.init("Ngự Thú Quyết", .tame_beast, 2, 0, 0, 0, .tu));
+    _ = state.arena_state.addUnit(master_unit);
+
+    // 2. Thêm các Linh thú xuất trận (Tiền Phong, Trung Quân, Hậu Vệ)
+    // Slot 0 (Tiền Phong / Tank) -> (2, 2)
+    if (state.party_entities[0]) |p_ent| {
+        if (state.registry.get(p_ent, Beast)) |b| {
+            var beast_unit = arena.ArenaUnit{
+                .entity = p_ent,
+                .is_player_side = true,
+                .icon_id = getBeastTextureId(b),
+                .col = 2,
+                .row = 2,
+                .facing = .right,
+                .move_range = 2,
+                .speed = b.speed,
+                .hp = b.hp,
+                .max_hp = b.max_hp,
+                .atk = b.atk,
+                .def = b.def,
+                .element = b.element,
+            };
+            beast_unit.setName(b.getName());
+            beast_unit.addSkill(arena.TacticalSkill.init("Quy Giáp Chấn", .melee_single, 1, 25, 0, 0, b.element));
+            beast_unit.addSkill(arena.TacticalSkill.init("Hộ Thể Thuẫn", .self_shield, 1, 0, 0, 40, b.element));
+            _ = state.arena_state.addUnit(beast_unit);
+        }
+    }
+
+    // Slot 1 (Trung Quân / DPS) -> (1, 1)
+    if (state.party_entities[1]) |p_ent| {
+        if (state.registry.get(p_ent, Beast)) |b| {
+            var beast_unit = arena.ArenaUnit{
+                .entity = p_ent,
+                .is_player_side = true,
+                .icon_id = getBeastTextureId(b),
+                .col = 1,
+                .row = 1,
+                .facing = .right,
+                .move_range = 3,
+                .speed = b.speed,
+                .hp = b.hp,
+                .max_hp = b.max_hp,
+                .atk = b.atk,
+                .def = b.def,
+                .element = b.element,
+            };
+            beast_unit.setName(b.getName());
+            beast_unit.addSkill(arena.TacticalSkill.init("Trảo Kích", .melee_single, 1, 35, 0, 0, b.element));
+            beast_unit.addSkill(arena.TacticalSkill.init("Liệt Hỏa Diễm", .ranged_aoe, 3, 60, 0, 0, b.element));
+            _ = state.arena_state.addUnit(beast_unit);
+        }
+    }
+
+    // Slot 2 (Hậu Vệ / Support) -> (1, 3)
+    if (state.party_entities[2]) |p_ent| {
+        if (state.registry.get(p_ent, Beast)) |b| {
+            var beast_unit = arena.ArenaUnit{
+                .entity = p_ent,
+                .is_player_side = true,
+                .icon_id = getBeastTextureId(b),
+                .col = 1,
+                .row = 3,
+                .facing = .right,
+                .move_range = 4,
+                .speed = b.speed,
+                .hp = b.hp,
+                .max_hp = b.max_hp,
+                .atk = b.atk,
+                .def = b.def,
+                .element = b.element,
+            };
+            beast_unit.setName(b.getName());
+            beast_unit.addSkill(arena.TacticalSkill.init("Phong Nhận", .ranged_single, 2, 22, 0, 0, b.element));
+            beast_unit.addSkill(arena.TacticalSkill.init("Hồi Xuân Pháp", .heal_target, 3, 0, 45, 0, b.element));
+            _ = state.arena_state.addUnit(beast_unit);
+        }
+    }
+
+    // 3. Thêm Yêu thú hoang dã / Boss -> (6, 2)
+    var wild_unit = arena.ArenaUnit{
+        .entity = wild_ent,
+        .is_player_side = false,
+        .icon_id = getBeastTextureId(&wild_beast),
+        .col = 6,
+        .row = 2,
+        .facing = .left,
+        .move_range = 3,
+        .speed = 45,
+        .hp = wild_beast.hp,
+        .max_hp = wild_beast.max_hp,
+        .atk = wild_beast.atk,
+        .def = wild_beast.def,
+        .element = wild_beast.element,
+    };
+    wild_unit.setName(wild_beast.getName());
+    wild_unit.addSkill(arena.TacticalSkill.init("Cuồng Bạo Trảo", .melee_single, 1, 35, 0, 0, wild_beast.element));
+    wild_unit.addSkill(arena.TacticalSkill.init("Liệt Ba Chấn", .ranged_single, 2, 40, 0, 0, wild_beast.element));
+    const wild_id = state.arena_state.addUnit(wild_unit);
+    state.arena_target_idx = wild_id;
+
+    state.arena_state.rebuildTimeline();
+    state.arena_state.mode = .targeting_move;
+
     var buf: [96]u8 = undefined;
-    const msg = std.fmt.bufPrint(&buf, "Dung do {s} [{s}]! [1,2,3] Ky nang, [SPACE] Danh, [T] Bat.", .{
-        wild_beast.getName(),
-        wild_beast.element.asciiName(),
-    }) catch "Vao tran chien!";
+    const msg = std.fmt.bufPrint(&buf, "Vào Lôi Đài! {s} [{s}] xuất hiện. Thứ tự: {s} đi đầu.", .{
+        wild_unit.getName(),
+        wild_unit.element.asciiName(),
+        state.arena_state.getUnit(state.arena_state.timeline[0]).?.getName(),
+    }) catch "Vào lôi đài chiến đấu!";
     state.setCombatLog(msg);
+}
+
+fn handleArenaTileClick(col: i32, row: i32) void {
+    if (state.mode != .battle) return;
+
+    const act_idx = state.arena_state.active_unit_idx orelse return;
+    const active_unit = state.arena_state.getUnit(act_idx) orelse return;
+
+    if (!active_unit.is_player_side) return;
+
+    // Case 1: Player is targeting Move
+    if (state.arena_state.mode == .targeting_move) {
+        if (state.arena_state.moveUnit(act_idx, col, row)) {
+            audio.play(.step);
+            var buf: [64]u8 = undefined;
+            const msg = std.fmt.bufPrint(&buf, "{s} tiến bước tới ô ({}, {}).", .{ active_unit.getName(), col, row }) catch "Di chuyển!";
+            state.setCombatLog(msg);
+            state.arena_state.mode = .select_action;
+        }
+        return;
+    }
+
+    // Case 2: Player is targeting a Skill
+    if (state.arena_state.mode == .targeting_skill) {
+        if (state.arena_state.selected_skill_idx) |sk_idx| {
+            if (state.arena_state.executeSkill(act_idx, sk_idx, col, row)) {
+                audio.play(.attack);
+                state.screen_shake = 0.04;
+
+                const tile_px_x = 26.0 + @as(f32, @floatFromInt(col)) * 74.0 + 35.0;
+                const tile_px_y = 146.0 + @as(f32, @floatFromInt(row)) * 76.0 + 20.0;
+                const ndc_x = (tile_px_x / 960.0) * 2.0 - 1.0;
+                const ndc_y = 1.0 - (tile_px_y / 760.0) * 2.0;
+
+                const last_hit = state.arena_state.last_hit;
+                if (last_hit.damage > 0) {
+                    var dmg_buf: [24]u8 = undefined;
+                    const dmg_str = std.fmt.bufPrint(&dmg_buf, "-{}", .{last_hit.damage}) catch "-30";
+                    state.spawnPopup(dmg_str, ndc_x, ndc_y, 255, 220, 80);
+
+                    if (last_hit.positional == .back) {
+                        state.spawnPopup("HAU KICH! +50%", ndc_x, ndc_y + 0.08, 255, 80, 80);
+                    } else if (last_hit.positional == .flank) {
+                        state.spawnPopup("TRAC KICH! +25%", ndc_x, ndc_y + 0.08, 255, 180, 60);
+                    }
+                } else if (last_hit.heal > 0) {
+                    var heal_buf: [24]u8 = undefined;
+                    const heal_str = std.fmt.bufPrint(&heal_buf, "+{}", .{last_hit.heal}) catch "+40";
+                    state.spawnPopup(heal_str, ndc_x, ndc_y, 80, 255, 120);
+                }
+
+                state.arena_state.checkBattleOutcome();
+                checkArenaOutcome();
+                state.arena_state.mode = .select_action;
+            }
+        }
+        return;
+    }
+
+    // Case 3: Select Action mode -> Click on a unit inspects it
+    if (state.arena_state.getUnitAt(col, row)) |u_id| {
+        state.arena_target_idx = u_id;
+    } else {
+        if (!active_unit.has_moved and state.arena_state.isTileReachable(active_unit, col, row)) {
+            if (state.arena_state.moveUnit(act_idx, col, row)) {
+                audio.play(.step);
+                var buf: [64]u8 = undefined;
+                const msg = std.fmt.bufPrint(&buf, "{s} tiến bước tới ô ({}, {}).", .{ active_unit.getName(), col, row }) catch "Di chuyển!";
+                state.setCombatLog(msg);
+            }
+        }
+    }
+}
+
+fn handleArenaEndTurn() void {
+    if (state.mode != .battle) return;
+    state.arena_state.nextTurn();
+
+    while (state.arena_state.phase == .enemy_turn) {
+        const enemy_idx = state.arena_state.active_unit_idx orelse break;
+        state.arena_state.stepEnemyAI(enemy_idx);
+        audio.play(.attack);
+
+        const last_hit = state.arena_state.last_hit;
+        if (last_hit.damage > 0) {
+            const tile_px_x = 26.0 + @as(f32, @floatFromInt(last_hit.target_col)) * 74.0 + 35.0;
+            const tile_px_y = 146.0 + @as(f32, @floatFromInt(last_hit.target_row)) * 76.0 + 20.0;
+            const ndc_x = (tile_px_x / 960.0) * 2.0 - 1.0;
+            const ndc_y = 1.0 - (tile_px_y / 760.0) * 2.0;
+
+            var dmg_buf: [24]u8 = undefined;
+            const dmg_str = std.fmt.bufPrint(&dmg_buf, "-{}", .{last_hit.damage}) catch "-25";
+            state.spawnPopup(dmg_str, ndc_x, ndc_y, 255, 80, 80);
+        }
+
+        checkArenaOutcome();
+        if (state.mode != .battle) break;
+
+        state.arena_state.nextTurn();
+    }
+}
+
+fn checkArenaOutcome() void {
+    if (state.arena_state.phase == .victory) {
+        audio.play(.breakthrough);
+        state.setMessage("Thắng trận lôi đài! Thu hoạch 80 Exp & 2 Linh Thảo. Trở về Bí Cảnh.");
+        if (state.registry.get(state.master_entity, CultivatorMaster)) |master| {
+            master.exp += 80;
+            master.herbs += 2;
+        }
+        for (state.arena_state.units) |slot| {
+            if (slot) |u| {
+                if (u.is_player_side and u.entity != null) {
+                    if (state.registry.get(u.entity.?, Beast)) |b| {
+                        b.hp = u.hp;
+                    }
+                }
+            }
+        }
+        db.saveAll(&state.registry, &state.party_entities, state.master_entity, &state.dungeon_world) catch {};
+        state.mode = .dungeon_map;
+    } else if (state.arena_state.phase == .tamed) {
+        audio.play(.breakthrough);
+        state.setMessage("Ngự Thú thành công! Yêu thú đã ký kết Khế Ước. Trở về Bí Cảnh.");
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                w.is_caught = true;
+                w.is_wild = false;
+                for (0..3) |slot_idx| {
+                    if (state.party_entities[slot_idx] == null) {
+                        state.party_entities[slot_idx] = w_ent;
+                        w.slot_idx = @as(u8, @intCast(slot_idx));
+                        break;
+                    }
+                }
+            }
+        }
+        db.saveAll(&state.registry, &state.party_entities, state.master_entity, &state.dungeon_world) catch {};
+        state.mode = .dungeon_map;
+    } else if (state.arena_state.phase == .defeat) {
+        state.setMessage("Thất bại tại lôi đài! Tạm thời rút lui dưỡng thương.");
+        state.mode = .dungeon_map;
+    }
+}
+
+fn renderArenaBoard() void {
+    const start_x: f32 = 26.0;
+    const start_y: f32 = 146.0;
+    const tile_w: f32 = 70.0;
+    const tile_h: f32 = 72.0;
+    const spacing_x: f32 = 4.0;
+    const spacing_y: f32 = 4.0;
+
+    const act_idx = state.arena_state.active_unit_idx;
+    const active_unit = if (act_idx) |idx| state.arena_state.getUnit(idx) else null;
+
+    var r: i32 = 0;
+    while (r < @as(i32, @intCast(arena.ARENA_ROWS))) : (r += 1) {
+        var c: i32 = 0;
+        while (c < @as(i32, @intCast(arena.ARENA_COLS))) : (c += 1) {
+            const tx = start_x + @as(f32, @floatFromInt(c)) * (tile_w + spacing_x);
+            const ty = start_y + @as(f32, @floatFromInt(r)) * (tile_h + spacing_y);
+
+            const is_occupied = state.arena_state.getUnitAt(c, r);
+
+            var is_reachable = false;
+            var is_in_skill_range = false;
+
+            if (active_unit) |au| {
+                if (state.arena_state.mode == .targeting_move and !au.has_moved) {
+                    is_reachable = state.arena_state.isTileReachable(au, c, r);
+                } else if (state.arena_state.mode == .targeting_skill and !au.has_acted) {
+                    if (state.arena_state.selected_skill_idx) |sk_idx| {
+                        if (sk_idx < au.skill_count) {
+                            is_in_skill_range = arena.ArenaState.isTileInSkillRange(au, &au.skills[sk_idx], c, r);
+                        }
+                    }
+                }
+            }
+
+            const is_active_tile = if (active_unit) |au| (au.col == c and au.row == r) else false;
+
+            const tile_bg = if (is_active_tile)
+                xml_ui.parseColor("#1c4234")
+            else if (is_reachable)
+                xml_ui.parseColor("#164e63")
+            else if (is_in_skill_range)
+                xml_ui.parseColor("#7f1d1d")
+            else
+                xml_ui.parseColor("#091815");
+
+            const tile_border = if (is_active_tile)
+                xml_ui.parseColor("#ffd740")
+            else if (is_reachable)
+                xml_ui.parseColor("#38bdf8")
+            else if (is_in_skill_range)
+                xml_ui.parseColor("#ef4444")
+            else
+                xml_ui.parseColor("#1b3f34");
+
+            var act_buf: [24]u8 = undefined;
+            const act_str = std.fmt.bufPrint(&act_buf, "arena_tile_{}_{}", .{ c, r }) catch "arena_tile";
+
+            const tile_label = if (is_reachable)
+                "[BƯỚC]"
+            else if (is_in_skill_range)
+                (if (is_occupied != null) "[KÍCH!]" else "[TẦM]")
+            else
+                "";
+
+            xml_ui.ui_state.addButtonEx(
+                "",
+                tile_label,
+                act_str,
+                .{ .x = tx, .y = ty, .w = tile_w, .h = tile_h },
+                tile_bg,
+                null,
+                tile_bg,
+                null,
+                tile_border,
+                if (is_reachable) xml_ui.parseColor("#38bdf8") else xml_ui.parseColor("#ffd740"),
+                8.0,
+                is_active_tile or is_reachable or is_in_skill_range,
+            );
+
+            if (is_occupied) |u_id| {
+                if (state.arena_state.getUnit(u_id)) |unit| {
+                    const icon_str = switch (unit.icon_id) {
+                        .player => "player",
+                        .turtle => "turtle",
+                        .fox => "fox",
+                        .bird => "bird",
+                        .dragon => "dragon",
+                        else => "player",
+                    };
+
+                    const p_border = if (unit.is_player_side) xml_ui.parseColor("#ffd740") else xml_ui.parseColor("#f87171");
+                    xml_ui.ui_state.addImage(
+                        "",
+                        icon_str,
+                        .{ .x = tx + 14.0, .y = ty + 6.0, .w = 42.0, .h = 42.0 },
+                        6.0,
+                        p_border,
+                        1.5,
+                        xml_ui.parseColor("#061210"),
+                    );
+
+                    const fill_color = if (unit.is_player_side) xml_ui.parseColor("#32d264") else xml_ui.parseColor("#f87171");
+                    xml_ui.ui_state.addProgressBarEx(
+                        "",
+                        unit.hp,
+                        unit.max_hp,
+                        .{ .x = tx + 5.0, .y = ty + 52.0, .w = tile_w - 10.0, .h = 6.0 },
+                        fill_color,
+                        null,
+                        xml_ui.parseColor("#060e0c"),
+                        xml_ui.parseColor("#1a3830"),
+                        "",
+                        3.0,
+                        false,
+                    );
+
+                    const facing_symbol = switch (unit.facing) {
+                        .right => ">",
+                        .left => "<",
+                        .up => "^",
+                        .down => "v",
+                    };
+                    xml_ui.ui_state.addText("", facing_symbol, tx + 6.0, ty + 12.0, if (unit.is_player_side) xml_ui.parseColor("#ffd740") else xml_ui.parseColor("#f87171"), 12.0);
+                }
+            }
+        }
+    }
 }
 
 fn handleMovePlayer(d_col: i32, d_row: i32) void {
@@ -822,29 +1240,48 @@ export fn input(event: ?*const sapp.Event) void {
 
         ._1 => {
             if (state.mode == .battle) {
-                executeBattleRound(1);
+                state.arena_state.selected_skill_idx = 0;
+                state.arena_state.mode = .targeting_skill;
+                state.setCombatLog("Đã chọn Chiêu 1! Nhấp vào mục tiêu trong tầm đỏ để xuất chiêu.");
             }
         },
         ._2 => {
             if (state.mode == .battle) {
-                executeBattleRound(2);
+                state.arena_state.selected_skill_idx = 1;
+                state.arena_state.mode = .targeting_skill;
+                state.setCombatLog("Đã chọn Chiêu 2! Nhấp vào mục tiêu trong tầm đỏ để xuất chiêu.");
             }
         },
         ._3 => {
             if (state.mode == .battle) {
-                executeBattleRound(3);
+                state.arena_state.selected_skill_idx = 2;
+                state.arena_state.mode = .targeting_skill;
+                state.setCombatLog("Đã chọn Chiêu 3! Nhấp vào mục tiêu trong tầm đỏ để xuất chiêu.");
             }
         },
 
         .SPACE => {
             if (state.mode == .battle) {
-                executeBattleRound(0);
+                handleArenaEndTurn();
             }
         },
 
         .T => {
             if (state.mode == .battle) {
-                executeTamingAttempt();
+                state.arena_state.selected_skill_idx = 3;
+                state.arena_state.mode = .targeting_skill;
+                state.setCombatLog("Đã chọn Bắt Thú! Nhấp vào Yêu thú máu đỏ để tung Ngự Thú Lệnh.");
+            }
+        },
+
+        .M => {
+            if (state.mode == .battle) {
+                if (state.arena_state.mode == .targeting_move) {
+                    state.arena_state.mode = .select_action;
+                } else {
+                    state.arena_state.mode = .targeting_move;
+                    state.setCombatLog("Chế độ Di Chuyển! Nhấp vào ô xanh lam để bước tới.");
+                }
             }
         },
 
@@ -1162,21 +1599,49 @@ fn handleUiAction(action: []const u8) void {
                 }
             }
         }
-    } else if (std.mem.eql(u8, action, "battle_skill_0")) {
-        executeBattleRound(0);
-    } else if (std.mem.eql(u8, action, "battle_skill_1")) {
-        executeBattleRound(1);
-    } else if (std.mem.eql(u8, action, "battle_skill_2")) {
-        executeBattleRound(2);
-    } else if (std.mem.eql(u8, action, "battle_skill_3")) {
-        executeBattleRound(3);
+    } else if (std.mem.eql(u8, action, "arena_skill_0") or std.mem.eql(u8, action, "battle_skill_0")) {
+        state.arena_state.selected_skill_idx = 0;
+        state.arena_state.mode = .targeting_skill;
+        state.setCombatLog("Đã chọn Chiêu 1! Nhấp vào mục tiêu trong tầm đỏ để xuất chiêu.");
+    } else if (std.mem.eql(u8, action, "arena_skill_1") or std.mem.eql(u8, action, "battle_skill_1")) {
+        state.arena_state.selected_skill_idx = 1;
+        state.arena_state.mode = .targeting_skill;
+        state.setCombatLog("Đã chọn Chiêu 2! Nhấp vào mục tiêu trong tầm đỏ để xuất chiêu.");
+    } else if (std.mem.eql(u8, action, "arena_skill_2") or std.mem.eql(u8, action, "battle_skill_2")) {
+        state.arena_state.selected_skill_idx = 2;
+        state.arena_state.mode = .targeting_skill;
+        state.setCombatLog("Đã chọn Chiêu 3! Nhấp vào mục tiêu trong tầm đỏ để xuất chiêu.");
+    } else if (std.mem.eql(u8, action, "arena_skill_3") or std.mem.eql(u8, action, "battle_skill_3")) {
+        state.arena_state.selected_skill_idx = 3;
+        state.arena_state.mode = .targeting_skill;
+        state.setCombatLog("Đã chọn Bắt Thú! Nhấp vào Yêu thú máu đỏ để tung Ngự Thú Lệnh.");
+    } else if (std.mem.eql(u8, action, "arena_toggle_move")) {
+        if (state.arena_state.mode == .targeting_move) {
+            state.arena_state.mode = .select_action;
+        } else {
+            state.arena_state.mode = .targeting_move;
+            state.setCombatLog("Chế độ Di Chuyển: Nhấp vào ô xanh lam trên lôi đài.");
+        }
+    } else if (std.mem.eql(u8, action, "arena_end_turn")) {
+        handleArenaEndTurn();
+    } else if (std.mem.startsWith(u8, action, "arena_tile_")) {
+        var it = std.mem.splitScalar(u8, action["arena_tile_".len..], '_');
+        if (it.next()) |c_s| {
+            if (it.next()) |r_s| {
+                const c = std.fmt.parseInt(i32, c_s, 10) catch -1;
+                const r = std.fmt.parseInt(i32, r_s, 10) catch -1;
+                if (c >= 0 and r >= 0) {
+                    handleArenaTileClick(c, r);
+                }
+            }
+        }
     } else if (std.mem.eql(u8, action, "taming_buff")) {
         triggerTamingBuff();
     } else if (std.mem.eql(u8, action, "taming_order")) {
         executeTamingAttempt();
     } else if (std.mem.eql(u8, action, "flee_battle")) {
         state.mode = .dungeon_map;
-        state.setMessage("Thi trien Don Thuat, rut lui an toan ve Bi Canh.");
+        state.setMessage("Thi triển Độn Thuật, rút lui an toàn về Bí Cảnh.");
     }
 }
 
@@ -1385,6 +1850,131 @@ fn dataResolver(key: []const u8, buf: []u8) ?[]const u8 {
         return "";
     }
 
+    // ==========================================
+    // WANDERING SWORD ARENA RESOLVERS
+    // ==========================================
+    if (std.mem.eql(u8, key, "timeline_display")) {
+        var t_buf: [240]u8 = undefined;
+        var cur_len: usize = 0;
+        for (0..state.arena_state.timeline_count) |i| {
+            const u_idx = state.arena_state.timeline[i];
+            if (state.arena_state.getUnit(u_idx)) |u| {
+                const is_act = (state.arena_state.active_unit_idx != null and state.arena_state.active_unit_idx.? == u_idx);
+                const prefix = if (is_act) "*[" else "[";
+                const suffix = if (is_act) "]" else "]";
+                const arrow = if (i + 1 < state.arena_state.timeline_count) " > " else "";
+                const piece = std.fmt.bufPrint(t_buf[cur_len..], "{s}{s}: {}{s}{s}", .{
+                    prefix,
+                    u.getName(),
+                    u.speed,
+                    suffix,
+                    arrow,
+                }) catch break;
+                cur_len += piece.len;
+            }
+        }
+        return std.fmt.bufPrint(buf, "{s}", .{t_buf[0..cur_len]}) catch null;
+    }
+
+    if (std.mem.eql(u8, key, "active_unit_name")) {
+        if (state.arena_state.active_unit_idx) |act_id| {
+            if (state.arena_state.getUnit(act_id)) |au| return au.getName();
+        }
+        return "Chờ lệnh...";
+    }
+
+    for (0..4) |sk_i| {
+        var sk_key_buf: [20]u8 = undefined;
+        const sk_k = std.fmt.bufPrint(&sk_key_buf, "skill_{}_name", .{sk_i}) catch continue;
+        if (std.mem.eql(u8, key, sk_k)) {
+            if (state.arena_state.active_unit_idx) |act_id| {
+                if (state.arena_state.getUnit(act_id)) |au| {
+                    if (sk_i < au.skill_count) {
+                        return au.skills[sk_i].getName();
+                    }
+                }
+            }
+            return "-";
+        }
+    }
+
+    // Target / Inspector resolver
+    const target_unit: ?*const arena.ArenaUnit = blk: {
+        if (state.arena_target_idx) |t_id| {
+            if (state.arena_state.getUnitConst(t_id)) |tu| break :blk tu;
+        }
+        for (state.arena_state.units) |slot| {
+            if (slot) |*u| {
+                if (u.alive and !u.is_player_side) {
+                    break :blk u;
+                }
+            }
+        }
+        break :blk null;
+    };
+
+    if (std.mem.eql(u8, key, "target_name")) {
+        if (target_unit) |tu| return tu.getName();
+        return "Không có mục tiêu";
+    }
+    if (std.mem.eql(u8, key, "target_icon")) {
+        if (target_unit) |tu| {
+            return switch (tu.icon_id) {
+                .player => "player",
+                .turtle => "turtle",
+                .fox => "fox",
+                .bird => "bird",
+                .dragon => "dragon",
+                else => "player",
+            };
+        }
+        return "dragon";
+    }
+    if (std.mem.eql(u8, key, "target_role")) {
+        if (target_unit) |tu| {
+            return if (tu.is_player_side) "Đồng Minh Phe Ta" else "Yêu Thú Đối Phương";
+        }
+        return "";
+    }
+    if (std.mem.eql(u8, key, "target_element_str")) {
+        if (target_unit) |tu| {
+            return std.fmt.bufPrint(buf, "Hệ: {s} | Công: {} | Thủ: {}", .{ tu.element.asciiName(), tu.atk, tu.def }) catch null;
+        }
+        return "";
+    }
+    if (std.mem.eql(u8, key, "target_hp")) {
+        if (target_unit) |tu| return std.fmt.bufPrint(buf, "{}", .{tu.hp}) catch null;
+        return "0";
+    }
+    if (std.mem.eql(u8, key, "target_max_hp")) {
+        if (target_unit) |tu| return std.fmt.bufPrint(buf, "{}", .{tu.max_hp}) catch null;
+        return "100";
+    }
+    if (std.mem.eql(u8, key, "target_hp_str")) {
+        if (target_unit) |tu| return std.fmt.bufPrint(buf, "{}/{} HP", .{ tu.hp, tu.max_hp }) catch null;
+        return "0/0 HP";
+    }
+    if (std.mem.eql(u8, key, "target_hp_color")) {
+        if (target_unit) |tu| {
+            if (tu.is_player_side) return "#32d264";
+            if (tu.hp * 5 <= tu.max_hp) return "#ff3030";
+            return "#f59e0b";
+        }
+        return "#ffd740";
+    }
+    if (std.mem.eql(u8, key, "target_facing_str")) {
+        if (target_unit) |tu| {
+            return std.fmt.bufPrint(buf, "Hướng nhìn: {s}", .{tu.facing.asString()}) catch null;
+        }
+        return "Hướng nhìn: -";
+    }
+    if (std.mem.eql(u8, key, "target_shield_str")) {
+        if (target_unit) |tu| {
+            return std.fmt.bufPrint(buf, "Hộ Thể Cương Khí: +{} Giáp", .{tu.shield}) catch null;
+        }
+        return "Hộ Thể: 0";
+    }
+
     return null;
 }
 
@@ -1530,6 +2120,7 @@ fn buildAndRenderXmlUI() void {
 
         .battle => {
             xml_ui.parseXmlUI(battle_xml_bytes, &xml_ui.ui_state, dataResolver);
+            renderArenaBoard();
         },
     }
 
