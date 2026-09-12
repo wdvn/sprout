@@ -75,6 +75,13 @@ pub const Beast = struct {
     is_caught: bool = false,
     slot_idx: ?u8 = null,      // 0: Tiền phong, 1: Trung quân, 2: Hậu vệ, 3: Dự bị 1, 4: Dự bị 2
 
+    pub fn isDeployed(self: *const Beast) bool {
+        if (self.slot_idx) |s| {
+            return s < 3;
+        }
+        return false;
+    }
+
     pub fn getName(self: *const Beast) []const u8 {
         return self.name[0..self.name_len];
     }

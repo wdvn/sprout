@@ -4,13 +4,10 @@ const sapp = sokol.app;
 const sg = sokol.gfx;
 const sglue = sokol.glue;
 const slog = sokol.log;
-const sgl = sokol.gl;
 
 const libs = @import("libs");
 const gl = libs.gl;
 const ecs = libs.ecs;
-const mui = libs.mui;
-
 const game = @import("game");
 const types = game.types;
 const components = game.components;
@@ -19,7 +16,15 @@ const battle = game.battle;
 const dungeon = game.dungeon;
 const renderer = game.renderer;
 const audio = game.audio;
+const db = game.db;
+const xml_ui = game.xml_ui;
 const TextureId = renderer.TextureId;
+
+const party_xml_bytes = @embedFile("assets/ui/party.xml");
+const dungeon_xml_bytes = @embedFile("assets/ui/dungeon.xml");
+const battle_xml_bytes = @embedFile("assets/ui/battle.xml");
+
+
 
 pub const Element = types.Element;
 pub const Rarity = types.Rarity;
@@ -138,23 +143,26 @@ pub const GameState = struct {
 
 var state = GameState{};
 
-// Sokol GL & MicroUI State
-var sgl_ctx: sgl.Context = .{};
-var mui_ctx: mui.Context = undefined;
-var mui_renderer: mui.sokol.Renderer = undefined;
-
 // WebGL Quad Resources
 var quad_prog: gl.Program = .{};
 var quad_vbo: gl.Buffer = .{};
 var quad_pos_loc: gl.AttribLocation = -1;
 var u_rect_loc: gl.UniformLocation = .{};
 var u_color_loc: gl.UniformLocation = .{};
+var u_color2_loc: gl.UniformLocation = .{};
 var u_border_color_loc: gl.UniformLocation = .{};
+var u_params_loc: gl.UniformLocation = .{};
+var u_extra_loc: gl.UniformLocation = .{};
 
 const quad_vs_source =
     \\#version 330
     \\in vec2 position;
     \\uniform vec4 u_rect;
+    \\uniform vec4 u_color;
+    \\uniform vec4 u_color2;
+    \\uniform vec4 u_border_color;
+    \\uniform vec4 u_params;
+    \\uniform vec4 u_extra;
     \\out vec2 v_uv;
     \\void main() {
     \\    v_uv = position;
@@ -168,15 +176,68 @@ const quad_fs_source =
     \\in vec2 v_uv;
     \\uniform vec4 u_rect;
     \\uniform vec4 u_color;
+    \\uniform vec4 u_color2;
     \\uniform vec4 u_border_color;
+    \\uniform vec4 u_params;
+    \\uniform vec4 u_extra;
     \\out vec4 frag_color;
+    \\
+    \\float sdRoundBox(vec2 p, vec2 b, float r) {
+    \\    vec2 q = abs(p) - b + vec2(r);
+    \\    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+    \\}
+    \\
     \\void main() {
-    \\    vec2 border_px = (vec2(1.0) - abs(v_uv)) * vec2(u_rect.z * 480.0, u_rect.w * 380.0);
-    \\    if (border_px.x < 1.5 || border_px.y < 1.5) {
-    \\        frag_color = u_border_color;
-    \\    } else {
-    \\        frag_color = u_color;
+    \\    vec2 half_size = u_params.xy;
+    \\    float radius = u_params.z;
+    \\    float border_w = u_params.w;
+    \\    float is_shadow = u_extra.x;
+    \\    float glow = u_extra.y;
+    \\    float time = u_extra.z;
+    \\
+    \\    vec2 p = v_uv * half_size;
+    \\
+    \\    // 1. Chế độ đổ bóng mờ (Drop Shadow)
+    \\    if (is_shadow > 0.5) {
+    \\        float s_dist = sdRoundBox(p, half_size - vec2(2.0), radius + 2.0);
+    \\        float s_alpha = smoothstep(12.0, -2.0, s_dist) * u_color.a;
+    \\        if (s_alpha <= 0.001) discard;
+    \\        frag_color = vec4(0.0, 0.0, 0.0, s_alpha);
+    \\        return;
     \\    }
+    \\
+    \\    // 2. Chế độ vẽ Box bo góc (SDF Round Box)
+    \\    float r = min(radius, min(half_size.x, half_size.y) - 1.0);
+    \\    if (r < 0.0) r = 0.0;
+    \\    float dist = sdRoundBox(p, half_size, r);
+    \\
+    \\    // Khử răng cưa viền ngoài (Anti-aliasing)
+    \\    float edge_alpha = 1.0 - smoothstep(0.0, 1.2, dist);
+    \\    if (edge_alpha <= 0.001) discard;
+    \\
+    \\    // Dải màu gradient từ đỉnh xuống đáy
+    \\    float t = clamp((v_uv.y + 1.0) * 0.5, 0.0, 1.0);
+    \\    vec4 fill = mix(u_color2, u_color, t);
+    \\
+    \\    // Hiệu ứng kính mờ (Specular Sheen) ở mép trên
+    \\    if (t > 0.82 && dist < -border_w) {
+    \\        float sheen = smoothstep(0.82, 1.0, t) * 0.12;
+    \\        fill.rgb += vec3(sheen);
+    \\    }
+    \\
+    \\    // Viền khung
+    \\    float border_dist = dist + border_w;
+    \\    float border_factor = smoothstep(-0.8, 0.5, border_dist);
+    \\
+    \\    vec4 border_col = u_border_color;
+    \\    if (glow > 0.0) {
+    \\        float pulse = 0.5 + 0.5 * sin(time * 5.0);
+    \\        border_col.rgb += vec3(0.25 * pulse, 0.22 * pulse, 0.08 * pulse);
+    \\        border_col.a = min(1.0, border_col.a + 0.25 * pulse);
+    \\    }
+    \\
+    \\    vec4 final_col = mix(fill, border_col, border_factor);
+    \\    frag_color = vec4(final_col.rgb, final_col.a * edge_alpha);
     \\}
 ;
 
@@ -189,7 +250,13 @@ const unit_quad_vertices = [_]f32{
     -1.0,  1.0,
 };
 
-fn drawRect(x: f32, y: f32, w: f32, h: f32, color: [4]f32, border: [4]f32) void {
+fn drawModernRect(
+    x: f32, y: f32, w: f32, h: f32,
+    color_top: [4]f32, color_bottom: [4]f32,
+    border: [4]f32,
+    radius: f32, border_w: f32,
+    is_shadow: bool, is_glow: bool,
+) void {
     gl.useProgram(quad_prog);
     gl.bindBuffer(gl.ARRAY_BUFFER, quad_vbo);
     gl.enableVertexAttribArray(@intCast(quad_pos_loc));
@@ -199,10 +266,64 @@ fn drawRect(x: f32, y: f32, w: f32, h: f32, color: [4]f32, border: [4]f32) void 
     const shake_y = if (state.screen_shake > 0.001) @cos(state.pulse_timer * 30.0) * state.screen_shake else 0.0;
 
     gl.uniform4f(u_rect_loc, x + shake_x, y + shake_y, w, h);
-    gl.uniform4f(u_color_loc, color[0], color[1], color[2], color[3]);
+    gl.uniform4f(u_color_loc, color_top[0], color_top[1], color_top[2], color_top[3]);
+    gl.uniform4f(u_color2_loc, color_bottom[0], color_bottom[1], color_bottom[2], color_bottom[3]);
     gl.uniform4f(u_border_color_loc, border[0], border[1], border[2], border[3]);
+
+    const half_w_px = w * 480.0;
+    const half_h_px = h * 380.0;
+    gl.uniform4f(u_params_loc, half_w_px, half_h_px, radius, border_w);
+
+    const shadow_val: f32 = if (is_shadow) 1.0 else 0.0;
+    const glow_val: f32 = if (is_glow) 1.0 else 0.0;
+    gl.uniform4f(u_extra_loc, shadow_val, glow_val, state.pulse_timer, 0.0);
+
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
+
+fn drawRect(x: f32, y: f32, w: f32, h: f32, color: [4]f32, border: [4]f32) void {
+    drawModernRect(x, y, w, h, color, color, border, 6.0, 1.2, false, false);
+}
+
+fn drawUiTexture(src_name: []const u8, x: f32, y: f32, hw: f32, hh: f32) void {
+    const tex_id: ?renderer.TextureId = if (std.mem.eql(u8, src_name, "player"))
+        .player
+    else if (std.mem.eql(u8, src_name, "turtle"))
+        .turtle
+    else if (std.mem.eql(u8, src_name, "fox"))
+        .fox
+    else if (std.mem.eql(u8, src_name, "bird"))
+        .bird
+    else if (std.mem.eql(u8, src_name, "dragon"))
+        .dragon
+    else
+        null;
+
+    if (tex_id) |id| {
+        renderer.drawTexturedQuad(id, x, y, hw, hh, .{ 1.0, 1.0, 1.0, 1.0 });
+    }
+}
+
+fn getBeastIcon(beast: *const Beast) []const u8 {
+    const name = beast.getName();
+    if (std.mem.indexOf(u8, name, "QUY") != null or std.mem.indexOf(u8, name, "XA") != null) {
+        return "turtle";
+    } else if (std.mem.indexOf(u8, name, "HO") != null or std.mem.indexOf(u8, name, "LANG") != null or std.mem.indexOf(u8, name, "HUNG") != null) {
+        return "fox";
+    } else if (std.mem.indexOf(u8, name, "DIEU") != null) {
+        return "bird";
+    } else if (std.mem.indexOf(u8, name, "LONG") != null) {
+        return "dragon";
+    }
+    return switch (beast.element) {
+        .shui => "turtle",
+        .huo, .jin => "fox",
+        .mu => "bird",
+        .tu => "fox",
+        .yin, .yang => "dragon",
+    };
+}
+
 
 /// Vẽ một panel UI chữ nhật theo tọa độ cột và dòng của sdtx
 fn drawPanel(c_start: f32, c_end: f32, r_start: f32, r_end: f32, bg: [4]f32, border: [4]f32) void {
@@ -238,49 +359,95 @@ fn drawHpBar(x: f32, y: f32, w: f32, h: f32, current_hp: i32, max_hp: i32, is_re
 fn initGameWorld() void {
     state.prng = std.Random.DefaultPrng.init(0x9E3779B97F4A7C15);
 
-    // 1. Tạo Tu Sĩ Chủ Nhân (Ngự Thú Sư)
-    state.master_entity = state.registry.create() catch unreachable;
-    var master = CultivatorMaster{
-        .realm = .qi_refining,
-        .exp = 30,
-        .exp_to_breakthrough = 100,
-        .herbs = 4,
-        .pills = 2,
-        .taming_orders = 5,
-        .master_skill = .taming_art,
+    // Khoi tao SQLite Database
+    db.initDb("sprout.db") catch |err| {
+        std.debug.print(">> [SQLite Error]: Khong the mo sprout.db ({}), thu dung :memory:\n", .{err});
+        db.initDb(":memory:") catch {};
     };
-    const master_name = "TIEU PHAM";
-    @memcpy(master.name[0..master_name.len], master_name);
-    master.name_len = master_name.len;
-    state.registry.add(state.master_entity, master) catch {};
 
-    // 2. Khởi tạo 3 Linh Thú Xuất Chiến Mẫu
-    // Slot 0: Tiền phong - Bích Thủy Quy (Hệ Thủy)
-    const e0 = state.registry.create() catch unreachable;
-    var b0 = beasts.createBeast(.bich_thuy_quy, false);
-    b0.slot_idx = 0;
-    state.registry.add(e0, b0) catch {};
-    state.party_entities[0] = e0;
+    const loaded = db.loadAll(&state.registry, &state.party_entities, &state.master_entity, &state.dungeon_world) catch false;
+    if (!loaded) {
+        // 1. Tạo Tu Sĩ Chủ Nhân (Ngự Thú Sư)
+        state.master_entity = state.registry.create() catch unreachable;
+        var master = CultivatorMaster{
+            .realm = .qi_refining,
+            .exp = 30,
+            .exp_to_breakthrough = 100,
+            .herbs = 4,
+            .pills = 2,
+            .taming_orders = 5,
+            .master_skill = .taming_art,
+        };
+        const master_name = "TIEU PHAM";
+        @memcpy(master.name[0..master_name.len], master_name);
+        master.name_len = master_name.len;
+        state.registry.add(state.master_entity, master) catch {};
 
-    // Slot 1: Trung quân - Hỏa Diễm Hồ (Hệ Hỏa)
-    const e1 = state.registry.create() catch unreachable;
-    var b1 = beasts.createBeast(.hoa_diem_ho, false);
-    b1.slot_idx = 1;
-    state.registry.add(e1, b1) catch {};
-    state.party_entities[1] = e1;
+        // 2. Khởi tạo 3 Linh Thú Xuất Chiến Mẫu (Ra trận)
+        // Slot 0: Tiền phong - Bích Thủy Quy (Hệ Thủy)
+        const e0 = state.registry.create() catch unreachable;
+        var b0 = beasts.createBeast(.bich_thuy_quy, false);
+        b0.slot_idx = 0;
+        b0.is_caught = true;
+        b0.is_wild = false;
+        state.registry.add(e0, b0) catch {};
+        state.party_entities[0] = e0;
 
-    // Slot 2: Hậu vệ - Linh Mộc Điểu (Hệ Mộc)
-    const e2 = state.registry.create() catch unreachable;
-    var b2 = beasts.createBeast(.linh_moc_dieu, false);
-    b2.slot_idx = 2;
-    state.registry.add(e2, b2) catch {};
-    state.party_entities[2] = e2;
+        // Slot 1: Trung quân - Hỏa Diễm Hồ (Hệ Hỏa)
+        const e1 = state.registry.create() catch unreachable;
+        var b1 = beasts.createBeast(.hoa_diem_ho, false);
+        b1.slot_idx = 1;
+        b1.is_caught = true;
+        b1.is_wild = false;
+        state.registry.add(e1, b1) catch {};
+        state.party_entities[1] = e1;
 
-    // 3. Khởi tạo Bản đồ Bí Cảnh tầng 1 (8x10 ô) với Fog of War
-    state.dungeon_world = Dungeon.init(1);
+        // Slot 2: Hậu vệ - Linh Mộc Điểu (Hệ Mộc)
+        const e2 = state.registry.create() catch unreachable;
+        var b2 = beasts.createBeast(.linh_moc_dieu, false);
+        b2.slot_idx = 2;
+        b2.is_caught = true;
+        b2.is_wild = false;
+        state.registry.add(e2, b2) catch {};
+        state.party_entities[2] = e2;
+
+        // 3. Khởi tạo thêm 2 Linh Thú trong Linh Thú Uyển (Trong kho, chưa ra trận)
+        const e3 = state.registry.create() catch unreachable;
+        var b3 = beasts.createBeast(.kim_giap_ho, false);
+        b3.slot_idx = null;
+        b3.is_caught = true;
+        b3.is_wild = false;
+        state.registry.add(e3, b3) catch {};
+
+        const e4 = state.registry.create() catch unreachable;
+        var b4 = beasts.createBeast(.u_minh_xa, false);
+        b4.slot_idx = null;
+        b4.is_caught = true;
+        b4.is_wild = false;
+        state.registry.add(e4, b4) catch {};
+
+        // 4. Khởi tạo Bản đồ Bí Cảnh tầng 1 (8x10 ô) với Fog of War
+        state.dungeon_world = Dungeon.init(1);
+
+        // Lưu dữ liệu khởi tạo vào SQLite
+        db.saveAll(&state.registry, &state.party_entities, state.master_entity, &state.dungeon_world) catch {};
+    }
+
     state.mode = .dungeon_map;
-
     state.setMessage("Tien vao Dai Hoang Co Tran (8x10). Di chuyen [W,A,S,D] de pha suong mu!");
+
+    const c_getenv = struct {
+        extern "c" fn getenv(name: [*:0]const u8) ?[*:0]const u8;
+    }.getenv;
+
+    if (c_getenv("SPROUT_START_MODE")) |val| {
+        const env_mode = std.mem.span(val);
+        if (std.mem.eql(u8, env_mode, "party")) {
+            state.mode = .party_collection;
+        } else if (std.mem.eql(u8, env_mode, "battle")) {
+            enterBattle(false);
+        }
+    }
 }
 
 fn enterBattle(is_boss: bool) void {
@@ -381,6 +548,7 @@ fn triggerBreakthrough() void {
         var buf: [96]u8 = undefined;
         const msg = std.fmt.bufPrint(&buf, "DO KIEP THANH CONG! Dot pha dai canh gioi: {s}!", .{master.realm.asciiName()}) catch "Dot pha!";
         state.setMessage(msg);
+        db.saveMaster(&state.registry, state.master_entity) catch {};
     } else {
         audio.play(.tame_fail);
         var buf: [96]u8 = undefined;
@@ -401,6 +569,7 @@ fn triggerPillCraft() void {
         audio.play(.heal);
         state.spawnPopup("+1 TRUC CO DAN", 0.0, 0.0, 255, 180, 80);
         state.setMessage("Luyen dan vien man! Tieu hao 3 Linh Thao luyen thanh 1 Truc Co Dan.");
+        db.saveMaster(&state.registry, state.master_entity) catch {};
     } else {
         audio.play(.tame_fail);
         state.setMessage("Thieu duoc lieu! Can it nhat 3 Linh Thao de mo lo luyen dan.");
@@ -412,29 +581,158 @@ fn triggerNextFloor() void {
     state.mode = .dungeon_map;
     audio.play(.breakthrough);
     state.setMessage("Buoc qua Cong Dich Chuyen sang Tang Bi Canh Moi!");
+    db.saveDungeon(&state.dungeon_world) catch {};
+    db.saveMaster(&state.registry, state.master_entity) catch {};
 }
 
-fn triggerFeedBeast(slot_idx: usize) void {
+fn deployBeast(ent: ecs.Entity) void {
+    const beast = state.registry.get(ent, Beast) orelse return;
+    if (beast.isDeployed()) {
+        state.spawnPopup("Linh thu da xuat chien!", 0.0, 0.05, 255, 200, 50);
+        return;
+    }
+    // Tìm slot trống trong 0..3 (Tiền Phong, Trung Quân, Hậu Vệ)
+    var target_slot: ?usize = null;
+    for (0..3) |s| {
+        if (state.party_entities[s] == null) {
+            target_slot = s;
+            break;
+        }
+    }
+    if (target_slot == null) {
+        audio.play(.tame_fail);
+        state.spawnPopup("Doi hinh da du 3 vi tri!", 0.0, 0.05, 255, 80, 80);
+        state.setMessage("Doi hinh ra tran da day (3/3). Hay Thu Hoi bot linh thu truoc khi dua thu khac vao!");
+        return;
+    }
+    const slot = target_slot.?;
+    beast.slot_idx = @intCast(slot);
+    state.party_entities[slot] = ent;
+    audio.play(.breakthrough);
+
+    db.saveBeast(&state.registry, ent) catch {};
+
+    const slot_names = [_][]const u8{ "Tien Phong", "Trung Quan", "Hau Ve" };
+    var buf: [96]u8 = undefined;
+    const msg = std.fmt.bufPrint(&buf, "{s} da RA TRAN tai vi tri [{s}]!", .{ beast.getName(), slot_names[slot] }) catch "Ra tran!";
+    state.setMessage(msg);
+    state.spawnPopup("RA TRAN THANH CONG!", 0.0, 0.08, 80, 255, 120);
+}
+
+fn recallBeast(slot_idx: usize) void {
+    if (slot_idx >= 3) return;
+    const ent = state.party_entities[slot_idx] orelse return;
+    const beast = state.registry.get(ent, Beast) orelse return;
+
+    var active_count: usize = 0;
+    for (0..3) |s| {
+        if (state.party_entities[s] != null) active_count += 1;
+    }
+    if (active_count <= 1) {
+        audio.play(.tame_fail);
+        state.spawnPopup("Can it nhat 1 Linh Thu!", 0.0, 0.05, 255, 80, 80);
+        state.setMessage("Doi hinh can it nhat 1 Linh Thu xuat chien de ho than!");
+        return;
+    }
+
+    beast.slot_idx = null;
+    state.party_entities[slot_idx] = null;
+    audio.play(.step);
+
+    db.saveBeast(&state.registry, ent) catch {};
+
+    var buf: [96]u8 = undefined;
+    const msg = std.fmt.bufPrint(&buf, "Da THU HOI {s} ve Linh Thu Uyen!", .{ beast.getName() }) catch "Thu hoi!";
+    state.setMessage(msg);
+    state.spawnPopup("DA THU HOI VE UYEN!", 0.0, 0.08, 255, 215, 80);
+}
+
+fn releaseBeast(ent: ecs.Entity) void {
+    const beast = state.registry.get(ent, Beast) orelse return;
+
+    // 1. Kiểm tra số lượng linh thú hiện có
+    const b_view = state.registry.view(Beast) orelse return;
+    var total_caught: usize = 0;
+    for (b_view.dense.items) |e| {
+        if (state.registry.get(e, Beast)) |b| {
+            if (b.is_caught and !b.is_wild) total_caught += 1;
+        }
+    }
+    if (total_caught <= 1) {
+        audio.play(.tame_fail);
+        state.spawnPopup("Can it nhat 1 Linh Thu!", 0.0, 0.05, 255, 80, 80);
+        state.setMessage("Khong the phong sinh toan bo! Tu si can it nhat 1 Linh Thu dong hanh.");
+        return;
+    }
+
+    // 2. Nếu thú đang xuất chiến trong đội hình
+    if (beast.slot_idx) |s| {
+        var active_count: usize = 0;
+        for (0..3) |slot| {
+            if (state.party_entities[slot] != null) active_count += 1;
+        }
+        if (active_count <= 1) {
+            audio.play(.tame_fail);
+            state.spawnPopup("Linh Thu xuat chien duy nhat!", 0.0, 0.05, 255, 80, 80);
+            state.setMessage("Khong the tha Linh Thu xuat chien duy nhat! Hay cho Linh Thu khac ra tran truoc.");
+            return;
+        }
+        state.party_entities[s] = null;
+    }
+
+    // 3. Tích lũy công đức / phần thưởng phóng sinh (+1 Ngự Thú Lệnh, +2 Linh Thảo)
+    var name_buf: [64]u8 = undefined;
+    const b_name = std.fmt.bufPrint(&name_buf, "{s}", .{beast.getName()}) catch "Linh Thu";
+
+    if (state.registry.get(state.master_entity, CultivatorMaster)) |master| {
+        master.taming_orders += 1;
+        master.herbs += 2;
+    }
+
+    // 4. Xóa khỏi SQLite Database
+    db.deleteBeast(ent) catch {};
+    db.saveMaster(&state.registry, state.master_entity) catch {};
+
+    // 5. Xóa khỏi ECS Registry
+    state.registry.destroy(ent);
+
+    // 6. Hiệu ứng âm thanh & thông báo
+    audio.play(.heal);
+    state.spawnPopup("DA THA LINH THU!", 0.0, 0.08, 255, 200, 80);
+
+    var buf: [128]u8 = undefined;
+    const msg = std.fmt.bufPrint(&buf, "Da phong sinh {s} ve tu nhien! Tich cong duc: +1 Ngu Thu Lenh, +2 Linh Thao.", .{b_name}) catch "Da tha linh thu!";
+    state.setMessage(msg);
+}
+
+fn feedBeastEntity(ent: ecs.Entity) void {
     const master = state.registry.get(state.master_entity, CultivatorMaster) orelse return;
     if (master.herbs >= 1) {
         master.herbs -= 1;
-        if (slot_idx < state.party_entities.len) {
-            if (state.party_entities[slot_idx]) |p_ent| {
-                if (state.registry.get(p_ent, Beast)) |b| {
-                    b.hp = @min(b.max_hp, b.hp + 50);
-                    b.atk += 2;
-                    audio.play(.heal);
-                    state.spawnPopup("+50 HP / +2 CONG", 0.0, 0.0, 80, 255, 120);
-                    var buf: [96]u8 = undefined;
-                    const msg = std.fmt.bufPrint(&buf, "Dung Linh Thao boi bo cho {s}: Hoi 50 HP, tang 2 Cong!", .{b.getName()}) catch "Boi duong!";
-                    state.setMessage(msg);
-                    return;
-                }
-            }
+        if (state.registry.get(ent, Beast)) |b| {
+            b.hp = @min(b.max_hp, b.hp + 50);
+            b.atk += 2;
+            audio.play(.heal);
+            state.spawnPopup("+50 HP / +2 CONG", 0.0, 0.05, 80, 255, 120);
+            var buf: [96]u8 = undefined;
+            const msg = std.fmt.bufPrint(&buf, "Dung 1 Linh Thao boi bo cho {s}: Hoi 50 HP, tang 2 Cong!", .{b.getName()}) catch "Boi duong!";
+            state.setMessage(msg);
+
+            db.saveBeast(&state.registry, ent) catch {};
+            db.saveMaster(&state.registry, state.master_entity) catch {};
+            return;
         }
     } else {
         audio.play(.tame_fail);
         state.setMessage("Can co Linh Thao de boi bo cho linh thu!");
+    }
+}
+
+fn triggerFeedBeast(slot_idx: usize) void {
+    if (slot_idx < state.party_entities.len) {
+        if (state.party_entities[slot_idx]) |p_ent| {
+            feedBeastEntity(p_ent);
+        }
     }
 }
 
@@ -450,11 +748,33 @@ fn triggerTamingBuff() void {
 
 export fn input(event: ?*const sapp.Event) void {
     const ev = event orelse return;
-    mui.sokol.handleEvent(&mui_ctx, ev);
+
+    const screen_w = sapp.widthf();
+    const screen_h = sapp.heightf();
+    const scale_x = if (screen_w > 0.0) 960.0 / screen_w else 1.0;
+    const scale_y = if (screen_h > 0.0) 760.0 / screen_h else 1.0;
+    const mx = ev.mouse_x * scale_x;
+    const my = ev.mouse_y * scale_y;
+
+    if (ev.type == .MOUSE_MOVE) {
+        xml_ui.ui_state.handleMouseMove(mx, my);
+        return;
+    } else if (ev.type == .MOUSE_DOWN and ev.mouse_button == .LEFT) {
+        if (xml_ui.ui_state.handleMouseDown(mx, my)) |action| {
+            handleUiAction(action);
+        }
+        return;
+    } else if (ev.type == .MOUSE_UP) {
+        xml_ui.ui_state.handleMouseUp(mx, my);
+        return;
+    }
 
     if (ev.type != .KEY_DOWN) return;
 
     switch (ev.key_code) {
+        .F11 => {
+            sapp.toggleFullscreen();
+        },
         .ESCAPE => {
             if (state.mode == .battle) {
                 state.mode = .dungeon_map;
@@ -594,6 +914,7 @@ fn executeBattleRound(skill_id: u8) void {
         if (state.registry.get(state.master_entity, CultivatorMaster)) |master| {
             master.exp += 75;
         }
+        db.saveAll(&state.registry, &state.party_entities, state.master_entity, &state.dungeon_world) catch {};
         state.mode = .dungeon_map;
         return;
     }
@@ -616,8 +937,15 @@ fn executeBattleRound(skill_id: u8) void {
         state.setCombatLog(msg);
     }
 
-    // Quái phản kích Tiền Phong
-    if (state.party_entities[0]) |tank_ent| {
+    // Quái phản kích chiến thú hàng đầu đang xuất chiến (Tiền Phong -> Trung Quân -> Hậu Vệ)
+    var attacked_ent: ?ecs.Entity = null;
+    for (0..3) |i| {
+        if (state.party_entities[i]) |ent| {
+            attacked_ent = ent;
+            break;
+        }
+    }
+    if (attacked_ent) |tank_ent| {
         if (state.registry.get(tank_ent, Beast)) |tank| {
             var counter_dmg = wild_beast.calcDamageAgainst(tank);
             if (shield_active) counter_dmg = @divTrunc(counter_dmg, 2);
@@ -650,8 +978,11 @@ fn executeTamingAttempt() void {
         audio.play(.tame_success);
         state.spawnPopup("THU PHUC THANH CONG!", 0.0, 0.1, 255, 215, 0);
 
+        wild_beast.is_caught = true;
+        wild_beast.is_wild = false;
+
         var placed_slot: ?usize = null;
-        for (0..5) |i| {
+        for (0..3) |i| {
             if (state.party_entities[i] == null) {
                 state.party_entities[i] = wild_ent;
                 wild_beast.slot_idx = @intCast(i);
@@ -659,16 +990,22 @@ fn executeTamingAttempt() void {
                 break;
             }
         }
+        if (placed_slot == null) {
+            wild_beast.slot_idx = null;
+        }
+
+        db.saveBeast(&state.registry, wild_ent) catch {};
+        db.saveMaster(&state.registry, state.master_entity) catch {};
 
         var buf: [96]u8 = undefined;
         if (placed_slot) |s| {
-            const msg = std.fmt.bufPrint(&buf, "THU PHUC DAI THANH! {s} da khe uoc tai Slot {}!", .{
+            const msg = std.fmt.bufPrint(&buf, "THU PHUC DAI THANH! {s} da xuat chien tai Slot {}!", .{
                 wild_beast.getName(),
                 s + 1,
             }) catch "Thu phuc thanh cong!";
             state.setMessage(msg);
         } else {
-            const msg = std.fmt.bufPrint(&buf, "Thu phuc thanh cong {s}! (Chuyen vao Linh Thu Uyen).", .{
+            const msg = std.fmt.bufPrint(&buf, "Thu phuc thanh cong {s}! (Luu vao Linh Thu Uyen).", .{
                 wild_beast.getName(),
             }) catch "Thu phuc thanh cong!";
             state.setMessage(msg);
@@ -687,33 +1024,6 @@ fn executeTamingAttempt() void {
     }
 }
 
-fn setupXianxiaStyle(ctx: *mui.Context) void {
-    const rgba = struct {
-        fn f(r: u8, g: u8, b: u8, a: u8) mui.Color {
-            return .{ .r = r, .g = g, .b = b, .a = a };
-        }
-    }.f;
-
-    ctx.style.colors[@intFromEnum(mui.StyleColor.text)] = rgba(235, 248, 242, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.border)] = rgba(195, 160, 65, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.windowbg)] = rgba(12, 24, 22, 248);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.titlebg)] = rgba(18, 48, 40, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.titletext)] = rgba(255, 215, 60, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.panelbg)] = rgba(8, 18, 16, 240);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.button)] = rgba(24, 52, 44, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.buttonhover)] = rgba(38, 85, 70, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.buttonfocus)] = rgba(60, 120, 100, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.base)] = rgba(14, 30, 26, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.basehover)] = rgba(26, 48, 42, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.basefocus)] = rgba(38, 68, 58, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.scrollbase)] = rgba(14, 26, 24, 255);
-    ctx.style.colors[@intFromEnum(mui.StyleColor.scrollthumb)] = rgba(55, 105, 90, 255);
-
-    ctx.style.title_height = 24;
-    ctx.style.padding = 6;
-    ctx.style.spacing = 5;
-}
-
 export fn init() void {
     state.registry = ecs.Registry.init(std.heap.page_allocator);
 
@@ -722,14 +1032,8 @@ export fn init() void {
         .logger = .{ .func = slog.func },
     });
 
-    sgl.setup(.{
-        .logger = .{ .func = slog.func },
-    });
-    sgl_ctx = sgl.makeContext(.{ .max_vertices = 64 * 1024 });
-    mui_renderer = mui.sokol.initBackend(&mui_ctx, sgl_ctx);
-    setupXianxiaStyle(&mui_ctx);
-
     quad_vbo = gl.createBuffer();
+
     gl.bindBuffer(gl.ARRAY_BUFFER, quad_vbo);
     gl.bufferDataSlice(gl.ARRAY_BUFFER, f32, &unit_quad_vertices, gl.STATIC_DRAW);
 
@@ -749,7 +1053,10 @@ export fn init() void {
     quad_pos_loc = gl.getAttribLocation(quad_prog, "position");
     u_rect_loc = gl.getUniformLocation(quad_prog, "u_rect");
     u_color_loc = gl.getUniformLocation(quad_prog, "u_color");
+    u_color2_loc = gl.getUniformLocation(quad_prog, "u_color2");
     u_border_color_loc = gl.getUniformLocation(quad_prog, "u_border_color");
+    u_params_loc = gl.getUniformLocation(quad_prog, "u_params");
+    u_extra_loc = gl.getUniformLocation(quad_prog, "u_extra");
 
     // Khởi tạo Texture Renderer, DebugText và Audio Synth
     renderer.init();
@@ -758,584 +1065,488 @@ export fn init() void {
     initGameWorld();
 }
 
-fn drawMicrouiHpBar(ctx: *mui.Context, current_hp: i32, max_hp: i32, is_red: bool) void {
-    const r = ctx.layoutNext();
-    ctx.drawRect(r, .{ .r = 16, .g = 26, .b = 24, .a = 255 });
-    ctx.drawBox(r, .{ .r = 60, .g = 90, .b = 80, .a = 255 });
-
-    if (current_hp <= 0 or max_hp <= 0) return;
-    const ratio = std.math.clamp(@as(f32, @floatFromInt(current_hp)) / @as(f32, @floatFromInt(max_hp)), 0.0, 1.0);
-    const fill_w = @as(i32, @intFromFloat(@as(f32, @floatFromInt(r.w - 2)) * ratio));
-    const fill_color: mui.Color = if (is_red)
-        .{ .r = 240, .g = 40, .b = 40, .a = 255 }
-    else if (ratio < 0.35)
-        .{ .r = 240, .g = 180, .b = 40, .a = 255 }
-    else
-        .{ .r = 50, .g = 210, .b = 100, .a = 255 };
-
-    ctx.drawRect(mui.Rect.init(r.x + 1, r.y + 1, fill_w, r.h - 2), fill_color);
-
-    var buf: [32]u8 = undefined;
-    const text = std.fmt.bufPrint(&buf, "{}/{} HP", .{ current_hp, max_hp }) catch "HP";
-    ctx.drawText(0, text, .{ .x = r.x + 8, .y = r.y + @divTrunc(r.h - 14, 2) }, .{ .r = 255, .g = 255, .b = 255, .a = 255 });
-}
-
-fn buildMicrouiDungeon() void {
-    const master = state.registry.get(state.master_entity, CultivatorMaster);
-
-    // 1. Header Window
-    if (mui_ctx.beginWindow("HeaderDungeon", mui.Rect.init(10, 8, 940, 64), .{
-        .notitle = true,
-        .noresize = true,
-        .noscroll = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 18);
-        var t_buf: [80]u8 = undefined;
-        const title = std.fmt.bufPrint(&t_buf, "[NGU THU TIEN DO] -- BI CANH CO TRAN (TANG {})", .{state.dungeon_world.floor}) catch "NGU THU TIEN DO";
-        mui_ctx.textLabel(title);
-
-        if (master) |m| {
-            mui_ctx.layoutRow(&[_]i32{ 280, 180, 240, -1 }, 22);
-            var m_buf: [80]u8 = undefined;
-            const m_str = std.fmt.bufPrint(&m_buf, "TU SI: {s} | {s}", .{ m.name[0..m.name_len], m.realm.asciiName() }) catch "TU SI";
-            mui_ctx.textLabel(m_str);
-
-            var exp_buf: [40]u8 = undefined;
-            const exp_str = std.fmt.bufPrint(&exp_buf, "EXP: {} / {}", .{ m.exp, m.exp_to_breakthrough }) catch "EXP";
-            mui_ctx.textLabel(exp_str);
-
-            var it_buf: [60]u8 = undefined;
-            const it_str = std.fmt.bufPrint(&it_buf, "Linh Thao: {} | Dan: {}", .{ m.herbs, m.pills }) catch "ITEMS";
-            mui_ctx.textLabel(it_str);
-
-            var to_buf: [40]u8 = undefined;
-            const to_str = std.fmt.bufPrint(&to_buf, "Ngu Thu Lenh: {}", .{ m.taming_orders }) catch "TAMING";
-            mui_ctx.textLabel(to_str);
-        }
-    }
-
-    // 2. Left Window: Party Summary
-    if (mui_ctx.beginWindow("Doi Hinh Chien Thu", mui.Rect.init(10, 78, 220, 512), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        const slot_names = [_][]const u8{ "[1] TIEN PHONG", "[2] TRUNG QUAN", "[3] HAU VE" };
-        for (0..3) |i| {
-            mui_ctx.layoutRow(&[_]i32{-1}, 18);
-            mui_ctx.textLabel(slot_names[i]);
-
-            if (state.party_entities[i]) |p_ent| {
-                if (state.registry.get(p_ent, Beast)) |b| {
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var nb: [40]u8 = undefined;
-                    const ns = std.fmt.bufPrint(&nb, "{s} [{s}]", .{ b.getName(), b.element.asciiName() }) catch "THU";
-                    mui_ctx.textLabel(ns);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 16);
-                    drawMicrouiHpBar(&mui_ctx, b.hp, b.max_hp, false);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var st_buf: [40]u8 = undefined;
-                    const st_str = std.fmt.bufPrint(&st_buf, "Cong: {} | Phong: {}", .{ b.atk, b.def }) catch "STATS";
-                    mui_ctx.textLabel(st_str);
+fn handleUiAction(action: []const u8) void {
+    if (std.mem.eql(u8, action, "close_party")) {
+        state.mode = .dungeon_map;
+    } else if (std.mem.eql(u8, action, "open_party")) {
+        state.mode = .party_collection;
+    } else if (std.mem.eql(u8, action, "craft_pill")) {
+        triggerPillCraft();
+    } else if (std.mem.eql(u8, action, "breakthrough")) {
+        triggerBreakthrough();
+    } else if (std.mem.eql(u8, action, "next_floor")) {
+        triggerNextFloor();
+    } else if (std.mem.eql(u8, action, "quit_game")) {
+        sapp.requestQuit();
+    } else if (std.mem.eql(u8, action, "save_db")) {
+        db.saveAll(&state.registry, &state.party_entities, state.master_entity, &state.dungeon_world) catch {};
+        state.spawnPopup("DA DONG BO SQLITE!", 0.0, 0.08, 80, 255, 120);
+        state.setMessage("Toan bo du lieu Tu Si va Linh Thu da duoc dong bo vao sprout.db.");
+    } else if (std.mem.eql(u8, action, "recall_0")) {
+        recallBeast(0);
+    } else if (std.mem.eql(u8, action, "recall_1")) {
+        recallBeast(1);
+    } else if (std.mem.eql(u8, action, "recall_2")) {
+        recallBeast(2);
+    } else if (std.mem.startsWith(u8, action, "recall_slot_")) {
+        const slot_s = action["recall_slot_".len..];
+        const s = std.fmt.parseInt(usize, slot_s, 10) catch 0;
+        recallBeast(s);
+    } else if (std.mem.eql(u8, action, "feed_0")) {
+        if (state.party_entities[0]) |ent| feedBeastEntity(ent);
+    } else if (std.mem.eql(u8, action, "feed_1")) {
+        if (state.party_entities[1]) |ent| feedBeastEntity(ent);
+    } else if (std.mem.eql(u8, action, "feed_2")) {
+        if (state.party_entities[2]) |ent| feedBeastEntity(ent);
+    } else if (std.mem.startsWith(u8, action, "deploy_beast_")) {
+        const id_s = action["deploy_beast_".len..];
+        const id = std.fmt.parseInt(u32, id_s, 10) catch 0;
+        const b_view = state.registry.view(Beast);
+        if (b_view) |pool| {
+            for (pool.dense.items) |ent| {
+                if (ent.id == id) {
+                    deployBeast(ent);
+                    break;
                 }
-            } else {
-                mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                mui_ctx.textLabel("(Chua xuat chien)");
-            }
-            mui_ctx.layoutRow(&[_]i32{-1}, 8);
-            mui_ctx.textLabel("");
-        }
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 32);
-        if (mui_ctx.button("[C] Linh Thu Uyen").submit) {
-            state.mode = .party_collection;
-        }
-    }
-
-    // 3. Center Window: 8x10 Dungeon Map Grid
-    if (mui_ctx.beginWindow("Dai Hoang Co Tran (8x10)", mui.Rect.init(236, 78, 488, 512), .{
-        .noresize = true,
-        .noclose = true,
-        .noscroll = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        const col_widths = [_]i32{ 44, 44, 44, 44, 44, 44, 44, 44, 44, 44 };
-
-        var r_idx: usize = GRID_ROWS;
-        while (r_idx > 0) {
-            r_idx -= 1;
-            const r = r_idx;
-            mui_ctx.layoutRow(&col_widths, 46);
-
-            for (0..GRID_COLS) |c| {
-                const tile = state.dungeon_world.tiles[r][c];
-                const is_player = (@as(i32, @intCast(c)) == state.dungeon_world.player_col and @as(i32, @intCast(r)) == state.dungeon_world.player_row);
-
-                const label = if (is_player)
-                    "[TA]"
-                else if (!tile.revealed)
-                    "?"
-                else if (tile.cleared)
-                    "."
-                else switch (tile.kind) {
-                    .empty => ".",
-                    .herb => "THAO",
-                    .wild_beast => "YEU",
-                    .event => "BAO",
-                    .boss => "BOSS",
-                };
-
-                var id_buf: [16]u8 = undefined;
-                const id_str = std.fmt.bufPrint(&id_buf, "t_{}_{}", .{ r, c }) catch "t";
-                mui_ctx.pushId(id_str);
-
-                if (mui_ctx.button(label).submit) {
-                    const p_c = state.dungeon_world.player_col;
-                    const p_r = state.dungeon_world.player_row;
-                    const dc = @as(i32, @intCast(c)) - p_c;
-                    const dr = @as(i32, @intCast(r)) - p_r;
-                    if (@abs(dc) + @abs(dr) == 1) {
-                        handleMovePlayer(dc, dr);
-                    } else if (dc != 0 or dr != 0) {
-                        const step_c = std.math.sign(dc);
-                        const step_r = if (step_c == 0) std.math.sign(dr) else 0;
-                        handleMovePlayer(step_c, step_r);
-                    }
-                }
-                mui_ctx.popId();
             }
         }
-    }
-
-    // 4. Right Window: Actions & Legend
-    if (mui_ctx.beginWindow("Bi Canh Bi Kip", mui.Rect.init(730, 78, 220, 512), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 18);
-        mui_ctx.textLabel("--- KY HIEU O CO ---");
-        mui_ctx.textLabel("[?]    Suong mu bi an");
-        mui_ctx.textLabel("[THAO] Thu hai Tien Thao");
-        mui_ctx.textLabel("[YEU]  Yeu Thu hoang da");
-        mui_ctx.textLabel("[BAO]  Ruong co co duyen");
-        mui_ctx.textLabel("[BOSS] Yeu Vuong Co Tran");
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 10);
-        mui_ctx.textLabel("");
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 18);
-        mui_ctx.textLabel("--- THAO TAC TU SI ---");
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 32);
-        if (mui_ctx.button("[P] Luyen Dan Duoc").submit) {
-            triggerPillCraft();
+    } else if (std.mem.startsWith(u8, action, "feed_beast_")) {
+        const id_s = action["feed_beast_".len..];
+        const id = std.fmt.parseInt(u32, id_s, 10) catch 0;
+        const b_view = state.registry.view(Beast);
+        if (b_view) |pool| {
+            for (pool.dense.items) |ent| {
+                if (ent.id == id) {
+                    feedBeastEntity(ent);
+                    break;
+                }
+            }
         }
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 32);
-        if (mui_ctx.button("[B] Dot Pha Canh Gioi").submit) {
-            triggerBreakthrough();
+    } else if (std.mem.startsWith(u8, action, "release_beast_")) {
+        const id_s = action["release_beast_".len..];
+        const id = std.fmt.parseInt(u32, id_s, 10) catch 0;
+        const b_view = state.registry.view(Beast);
+        if (b_view) |pool| {
+            for (pool.dense.items) |ent| {
+                if (ent.id == id) {
+                    releaseBeast(ent);
+                    break;
+                }
+            }
         }
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 32);
-        if (mui_ctx.button("[C] Linh Thu Uyen").submit) {
-            state.mode = .party_collection;
+    } else if (std.mem.startsWith(u8, action, "tile_")) {
+        var it = std.mem.splitScalar(u8, action["tile_".len..], '_');
+        if (it.next()) |r_s| {
+            if (it.next()) |c_s| {
+                const r = std.fmt.parseInt(i32, r_s, 10) catch 0;
+                const c = std.fmt.parseInt(i32, c_s, 10) catch 0;
+                const p_c = state.dungeon_world.player_col;
+                const p_r = state.dungeon_world.player_row;
+                const dc = c - p_c;
+                const dr = r - p_r;
+                if (@abs(dc) + @abs(dr) == 1) {
+                    handleMovePlayer(dc, dr);
+                } else if (dc != 0 or dr != 0) {
+                    const step_c = std.math.sign(dc);
+                    const step_r = if (step_c == 0) std.math.sign(dr) else 0;
+                    handleMovePlayer(step_c, step_r);
+                }
+            }
         }
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 32);
-        if (mui_ctx.button("[R] Sang Tang Moi").submit) {
-            triggerNextFloor();
-        }
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 32);
-        if (mui_ctx.button("[ESC] Thoat Game").submit) {
-            sapp.requestQuit();
-        }
-    }
-
-    // 5. Bottom Log Window
-    if (mui_ctx.beginWindow("Nhat Ky Bi Canh", mui.Rect.init(10, 596, 940, 154), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 24);
-        mui_ctx.textBlock(state.message[0..state.message_len]);
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 20);
-        mui_ctx.textLabel("TU LUYEN: 3 Linh Thao -> 1 Truc Co Dan [P]  |  Du Exp bam [B] de Dot Pha.");
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 20);
-        mui_ctx.textLabel("DIEU KHIEN: Phim [W,A,S,D] hoac click chuot truc tiep vao cac o ban do.");
+    } else if (std.mem.eql(u8, action, "battle_skill_0")) {
+        executeBattleRound(0);
+    } else if (std.mem.eql(u8, action, "battle_skill_1")) {
+        executeBattleRound(1);
+    } else if (std.mem.eql(u8, action, "battle_skill_2")) {
+        executeBattleRound(2);
+    } else if (std.mem.eql(u8, action, "battle_skill_3")) {
+        executeBattleRound(3);
+    } else if (std.mem.eql(u8, action, "taming_buff")) {
+        triggerTamingBuff();
+    } else if (std.mem.eql(u8, action, "taming_order")) {
+        executeTamingAttempt();
+    } else if (std.mem.eql(u8, action, "flee_battle")) {
+        state.mode = .dungeon_map;
+        state.setMessage("Thi trien Don Thuat, rut lui an toan ve Bi Canh.");
     }
 }
 
-fn buildMicrouiBattle() void {
+fn dataResolver(key: []const u8, buf: []u8) ?[]const u8 {
     const master = state.registry.get(state.master_entity, CultivatorMaster);
 
-    // 1. Header Window
-    if (mui_ctx.beginWindow("HeaderBattle", mui.Rect.init(10, 8, 940, 64), .{
-        .notitle = true,
-        .noresize = true,
-        .noscroll = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 18);
-        mui_ctx.textLabel("[CHIEN DAU] -- TIEN HOAN CHIEN TRUONG");
-
-        if (master) |m| {
-            mui_ctx.layoutRow(&[_]i32{ 380, 240, -1 }, 22);
-            var m_buf: [80]u8 = undefined;
-            const m_str = std.fmt.bufPrint(&m_buf, "Tu Si: {s} | Ngu Thu Tran", .{ m.name[0..m.name_len] }) catch "TU SI";
-            mui_ctx.textLabel(m_str);
-
-            var to_buf: [40]u8 = undefined;
-            const to_str = std.fmt.bufPrint(&to_buf, "Ngu Thu Lenh: {} cai", .{ m.taming_orders }) catch "TAMING";
-            mui_ctx.textLabel(to_str);
-
-            mui_ctx.textLabel("[HOP KICH PHAN VIEM] Hoa +30% DMG");
+    if (std.mem.eql(u8, key, "master_name")) {
+        if (master) |m| return m.name[0..m.name_len];
+        return "Vo Danh Tu Si";
+    }
+    if (std.mem.eql(u8, key, "master_realm")) {
+        if (master) |m| return m.realm.asciiName();
+        return "Pham Nhan";
+    }
+    if (std.mem.eql(u8, key, "master_exp")) {
+        if (master) |m| return std.fmt.bufPrint(buf, "{}", .{m.exp}) catch null;
+        return "0";
+    }
+    if (std.mem.eql(u8, key, "master_exp_max")) {
+        if (master) |m| return std.fmt.bufPrint(buf, "{}", .{m.exp_to_breakthrough}) catch null;
+        return "100";
+    }
+    if (std.mem.eql(u8, key, "master_herbs")) {
+        if (master) |m| return std.fmt.bufPrint(buf, "{}", .{m.herbs}) catch null;
+        return "0";
+    }
+    if (std.mem.eql(u8, key, "master_pills")) {
+        if (master) |m| return std.fmt.bufPrint(buf, "{}", .{m.pills}) catch null;
+        return "0";
+    }
+    if (std.mem.eql(u8, key, "master_orders")) {
+        if (master) |m| return std.fmt.bufPrint(buf, "{}", .{m.taming_orders}) catch null;
+        return "0";
+    }
+    if (std.mem.eql(u8, key, "dungeon_floor")) {
+        return std.fmt.bufPrint(buf, "{}", .{state.dungeon_world.floor}) catch null;
+    }
+    if (std.mem.eql(u8, key, "dungeon_message")) {
+        return state.message[0..state.message_len];
+    }
+    if (std.mem.eql(u8, key, "combat_log")) {
+        return state.combat_log[0..state.combat_log_len];
+    }
+    if (std.mem.eql(u8, key, "master_icon")) {
+        return "player";
+    }
+    if (std.mem.eql(u8, key, "wild_icon")) {
+        if (state.wild_beast_entity) |ent| {
+            if (state.registry.get(ent, Beast)) |b| return getBeastIcon(b);
         }
+        return "dragon";
     }
 
-    // 2. Left Window: Ally Party
-    if (mui_ctx.beginWindow("Phe Ta: Tu Si & Chien Thu", mui.Rect.init(10, 78, 460, 480), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        const skill_names = [_][]const u8{
-            "[1] Ho The Thuan (Bich Thuy Quy: -50% DMG)",
-            "[2] Liet Hoa Diem (Hoa Diem Ho: 60 DMG)",
-            "[3] Hoi Xuan Thuat (Linh Moc Dieu: +40 HP)",
-        };
-
-        for (0..3) |i| {
-            if (state.party_entities[i]) |p_ent| {
-                if (state.registry.get(p_ent, Beast)) |b| {
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var name_buf: [60]u8 = undefined;
-                    const name_str = std.fmt.bufPrint(&name_buf, "[Slot {}] {s} [{s} - {s}]", .{
-                        i + 1,
-                        b.getName(),
-                        b.element.asciiName(),
-                        b.rarity.asciiName(),
-                    }) catch "THU";
-                    mui_ctx.textLabel(name_str);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    drawMicrouiHpBar(&mui_ctx, b.hp, b.max_hp, false);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var st_buf: [60]u8 = undefined;
-                    const st_str = std.fmt.bufPrint(&st_buf, "Cong: {} | Phong: {} | Than: {}", .{ b.atk, b.def, b.speed }) catch "STATS";
-                    mui_ctx.textLabel(st_str);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    mui_ctx.textLabel(skill_names[i]);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 6);
-                    mui_ctx.textLabel("");
+    // Party slots (0, 1, 2)
+    for (0..3) |i| {
+        var s_name_k: [20]u8 = undefined;
+        const sn = std.fmt.bufPrint(&s_name_k, "slot_{}_name", .{i}) catch continue;
+        if (std.mem.eql(u8, key, sn)) {
+            if (state.party_entities[i]) |ent| {
+                if (state.registry.get(ent, Beast)) |b| {
+                    return std.fmt.bufPrint(buf, "{s} [{s}]", .{ b.getName(), b.element.asciiName() }) catch null;
                 }
             }
+            return "(Chua xuat chien)";
+        }
+
+        var s_icon_k: [20]u8 = undefined;
+        const si = std.fmt.bufPrint(&s_icon_k, "slot_{}_icon", .{i}) catch continue;
+        if (std.mem.eql(u8, key, si)) {
+            if (state.party_entities[i]) |ent| {
+                if (state.registry.get(ent, Beast)) |b| {
+                    return getBeastIcon(b);
+                }
+            }
+            return "";
+        }
+
+        var s_hp_k: [20]u8 = undefined;
+        const sh = std.fmt.bufPrint(&s_hp_k, "slot_{}_hp", .{i}) catch continue;
+        if (std.mem.eql(u8, key, sh)) {
+            if (state.party_entities[i]) |ent| {
+                if (state.registry.get(ent, Beast)) |b| {
+                    return std.fmt.bufPrint(buf, "{}", .{b.hp}) catch null;
+                }
+            }
+            return "0";
+        }
+
+        var s_mhp_k: [20]u8 = undefined;
+        const smh = std.fmt.bufPrint(&s_mhp_k, "slot_{}_max_hp", .{i}) catch continue;
+        if (std.mem.eql(u8, key, smh)) {
+            if (state.party_entities[i]) |ent| {
+                if (state.registry.get(ent, Beast)) |b| {
+                    return std.fmt.bufPrint(buf, "{}", .{b.max_hp}) catch null;
+                }
+            }
+            return "100";
+        }
+
+        var s_hps_k: [20]u8 = undefined;
+        const shs = std.fmt.bufPrint(&s_hps_k, "slot_{}_hp_str", .{i}) catch continue;
+        if (std.mem.eql(u8, key, shs)) {
+            if (state.party_entities[i]) |ent| {
+                if (state.registry.get(ent, Beast)) |b| {
+                    return std.fmt.bufPrint(buf, "{}/{} HP", .{ b.hp, b.max_hp }) catch null;
+                }
+            }
+            return "-";
+        }
+
+        var s_st_k: [20]u8 = undefined;
+        const sst = std.fmt.bufPrint(&s_st_k, "slot_{}_stats", .{i}) catch continue;
+        if (std.mem.eql(u8, key, sst)) {
+            if (state.party_entities[i]) |ent| {
+                if (state.registry.get(ent, Beast)) |b| {
+                    return std.fmt.bufPrint(buf, "Cong: {} | Phong: {} | Toc: {}", .{ b.atk, b.def, b.speed }) catch null;
+                }
+            }
+            return "Chon Linh Thu ben duoi";
+        }
+
+        var s_st_short_k: [24]u8 = undefined;
+        const sst_short = std.fmt.bufPrint(&s_st_short_k, "slot_{}_stats_short", .{i}) catch continue;
+        if (std.mem.eql(u8, key, sst_short)) {
+            if (state.party_entities[i]) |ent| {
+                if (state.registry.get(ent, Beast)) |b| {
+                    return std.fmt.bufPrint(buf, "Cong: {} | Phong: {}", .{ b.atk, b.def }) catch null;
+                }
+            }
+            return "Chua xuat chien";
         }
     }
 
-    // 3. Right Window: Wild Beast
-    if (mui_ctx.beginWindow("Doi Phuong: Yeu Thu Hoang Da", mui.Rect.init(480, 78, 470, 480), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
 
+    // Wild beast
+    if (std.mem.eql(u8, key, "wild_name")) {
         if (state.wild_beast_entity) |w_ent| {
             if (state.registry.get(w_ent, Beast)) |w| {
-                mui_ctx.layoutRow(&[_]i32{-1}, 22);
-                var wb_buf: [60]u8 = undefined;
-                const wb_str = std.fmt.bufPrint(&wb_buf, "YEU THU: {s} [{s} - {s}]", .{
-                    w.getName(),
-                    w.element.asciiName(),
-                    w.rarity.asciiName(),
-                }) catch "YEU THU";
-                mui_ctx.textLabel(wb_str);
-
-                mui_ctx.layoutRow(&[_]i32{-1}, 24);
-                drawMicrouiHpBar(&mui_ctx, w.hp, w.max_hp, w.isRedHp());
-
-                mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                var st_buf: [60]u8 = undefined;
-                const st_str = std.fmt.bufPrint(&st_buf, "Cong: {} | Phong: {} | Than: {}", .{ w.atk, w.def, w.speed }) catch "STATS";
-                mui_ctx.textLabel(st_str);
-
-                mui_ctx.layoutRow(&[_]i32{-1}, 12);
-                mui_ctx.textLabel("");
-
-                if (w.isRedHp()) {
-                    mui_ctx.layoutRow(&[_]i32{-1}, 22);
-                    mui_ctx.textLabel("*** YEU THU MAU DO (<30% HP)! CO THE PHONG AN! ***");
-                    mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                    mui_ctx.textLabel("Ty le thu phuc: 78%! Bam [T] de tung Ngu Thu Lenh!");
-                    mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                    mui_ctx.textLabel("Niem chu [S] Thu Phuc Thuat de tang them 25% ty le!");
-                } else {
-                    mui_ctx.layoutRow(&[_]i32{-1}, 22);
-                    mui_ctx.textLabel("Yeu thu dang sung man khi huyet!");
-                    mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                    mui_ctx.textLabel("Dung don danh & ky nang lam suy yeu yeu thu ve MAU DO.");
-                }
-
-                mui_ctx.layoutRow(&[_]i32{-1}, 16);
-                mui_ctx.textLabel("");
-                mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                mui_ctx.textLabel("--- TUONG KHAC NGU HANH ---");
-                mui_ctx.textLabel("Hoa khac Kim (+50%), Thuy khac Hoa, Moc khac Tho.");
-                mui_ctx.textLabel("Am - Duong khac nhau: x2.0 Sat thuong Chi Mang!");
+                return std.fmt.bufPrint(buf, "{s} [{s} - {s}]", .{ w.getName(), w.element.asciiName(), w.rarity.asciiName() }) catch null;
             }
         }
+        return "YEU THU";
+    }
+    if (std.mem.eql(u8, key, "wild_hp")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                return std.fmt.bufPrint(buf, "{}", .{w.hp}) catch null;
+            }
+        }
+        return "0";
+    }
+    if (std.mem.eql(u8, key, "wild_max_hp")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                return std.fmt.bufPrint(buf, "{}", .{w.max_hp}) catch null;
+            }
+        }
+        return "100";
+    }
+    if (std.mem.eql(u8, key, "wild_hp_str")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                return std.fmt.bufPrint(buf, "{}/{} HP", .{ w.hp, w.max_hp }) catch null;
+            }
+        }
+        return "0/0 HP";
+    }
+    if (std.mem.eql(u8, key, "wild_hp_color")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                if (w.isRedHp()) return "#f02828";
+            }
+        }
+        return "#f0a020";
+    }
+    if (std.mem.eql(u8, key, "wild_stats")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                return std.fmt.bufPrint(buf, "Cong: {} | Phong: {} | Than: {}", .{ w.atk, w.def, w.speed }) catch null;
+            }
+        }
+        return "";
+    }
+    if (std.mem.eql(u8, key, "wild_tip_1")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                if (w.isRedHp()) return "*** YEU THU MAU DO (<30% HP)! CO THE PHONG AN! ***";
+            }
+        }
+        return "Yeu thu dang sung man khi huyet!";
+    }
+    if (std.mem.eql(u8, key, "wild_tip_2")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                if (w.isRedHp()) return "Ty le thu phuc: 78%! Bam [T] de tung Ngu Thu Lenh!";
+            }
+        }
+        return "Dung don danh & ky nang lam suy yeu yeu thu ve MAU DO.";
+    }
+    if (std.mem.eql(u8, key, "wild_tip_3")) {
+        if (state.wild_beast_entity) |w_ent| {
+            if (state.registry.get(w_ent, Beast)) |w| {
+                if (w.isRedHp()) return "Niem chu [S] Thu Phuc Thuat de tang them 25% ty le!";
+            }
+        }
+        return "";
     }
 
-    // 4. Bottom Left Window: Combat Action Buttons
-    if (mui_ctx.beginWindow("Menh Lenh Tac Chien", mui.Rect.init(10, 566, 530, 184), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        mui_ctx.layoutRow(&[_]i32{ 250, -1 }, 32);
-        if (mui_ctx.button("[SPACE] Hop Kich 3 Thu").submit) {
-            executeBattleRound(0);
-        }
-        if (mui_ctx.button("[1] Ho The Thuan").submit) {
-            executeBattleRound(1);
-        }
-
-        mui_ctx.layoutRow(&[_]i32{ 250, -1 }, 32);
-        if (mui_ctx.button("[2] Liet Hoa Diem").submit) {
-            executeBattleRound(2);
-        }
-        if (mui_ctx.button("[3] Hoi Xuan Thuat").submit) {
-            executeBattleRound(3);
-        }
-
-        mui_ctx.layoutRow(&[_]i32{ 250, -1 }, 32);
-        if (mui_ctx.button("[S] Niem Chu (+25% Bat)").submit) {
-            triggerTamingBuff();
-        }
-        if (mui_ctx.button("[T] Tung Ngu Thu Lenh").submit) {
-            executeTamingAttempt();
-        }
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 30);
-        if (mui_ctx.button("[ESC] Don Thuat Rut Lui").submit) {
-            state.mode = .dungeon_map;
-            state.setMessage("Thi trien Don Thuat, rut lui an toan ve Bi Canh.");
-        }
-    }
-
-    // 5. Bottom Right Window: Combat Log
-    if (mui_ctx.beginWindow("Dien Bien Giao Tranh", mui.Rect.init(550, 566, 400, 184), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 40);
-        mui_ctx.textBlock(state.combat_log[0..state.combat_log_len]);
-
-        if (master) |m| {
-            mui_ctx.layoutRow(&[_]i32{-1}, 20);
-            var b: [40]u8 = undefined;
-            const s = std.fmt.bufPrint(&b, "Ngu Thu Lenh con lai: {} cai", .{ m.taming_orders }) catch "0";
-            mui_ctx.textLabel(s);
-        }
-
-        mui_ctx.layoutRow(&[_]i32{-1}, 20);
-        mui_ctx.textLabel("Click nut lenh hoac bam phim tuong ung tren ban phim.");
-    }
+    return null;
 }
 
-fn buildMicrouiParty() void {
-    const master = state.registry.get(state.master_entity, CultivatorMaster);
+fn buildAndRenderXmlUI() void {
+    switch (state.mode) {
+        .party_collection => {
+            xml_ui.parseXmlUI(party_xml_bytes, &xml_ui.ui_state, dataResolver);
 
-    // 1. Header Window
-    if (mui_ctx.beginWindow("HeaderParty", mui.Rect.init(10, 8, 940, 64), .{
-        .notitle = true,
-        .noresize = true,
-        .noscroll = true,
-    }).active) {
-        defer mui_ctx.endWindow();
+            const b_view = state.registry.view(Beast);
+            if (b_view) |pool| {
+                var row_y: f32 = 330.0;
+                for (pool.dense.items) |ent| {
+                    const beast = state.registry.get(ent, Beast) orelse continue;
+                    if (beast.is_wild or !beast.is_caught) continue;
+                    if (row_y > 540.0) break;
 
-        mui_ctx.layoutRow(&[_]i32{-1}, 18);
-        mui_ctx.textLabel("[LINH THU UYEN] -- BOI DUONG & QUAN LY KHE UOC");
+                    var name_buf: [48]u8 = undefined;
+                    const name_str = std.fmt.bufPrint(&name_buf, "{s} [{s}-{s}]", .{
+                        beast.getName(),
+                        beast.element.asciiName(),
+                        beast.rarity.asciiName(),
+                    }) catch "Linh Thu";
+                    xml_ui.ui_state.addText("", name_str, 20, row_y + 4, xml_ui.parseColor("#ebf8f2"), 14);
 
-        if (master) |m| {
-            mui_ctx.layoutRow(&[_]i32{ 320, 240, -1 }, 22);
-            var m_buf: [80]u8 = undefined;
-            const m_str = std.fmt.bufPrint(&m_buf, "Chu Nhan: {s} | Canh Gioi: {s}", .{ m.name[0..m.name_len], m.realm.asciiName() }) catch "CHU NHAN";
-            mui_ctx.textLabel(m_str);
+                    var hp_buf: [24]u8 = undefined;
+                    const hp_str = std.fmt.bufPrint(&hp_buf, "{}/{} HP", .{ beast.hp, beast.max_hp }) catch "-";
+                    xml_ui.ui_state.addText("", hp_str, 250, row_y + 4, xml_ui.parseColor("#32d264"), 14);
 
-            var it_buf: [60]u8 = undefined;
-            const it_str = std.fmt.bufPrint(&it_buf, "Tien Thao: {} | Truc Co Dan: {}", .{ m.herbs, m.pills }) catch "ITEMS";
-            mui_ctx.textLabel(it_str);
+                    var st_buf: [32]u8 = undefined;
+                    const st_str = std.fmt.bufPrint(&st_buf, "C:{}|P:{}|T:{}", .{ beast.atk, beast.def, beast.speed }) catch "-";
+                    xml_ui.ui_state.addText("", st_str, 360, row_y + 4, xml_ui.parseColor("#a0b8b0"), 14);
 
-            var to_buf: [40]u8 = undefined;
-            const to_str = std.fmt.bufPrint(&to_buf, "Ngu Thu Lenh: {} cai", .{ m.taming_orders }) catch "TAMING";
-            mui_ctx.textLabel(to_str);
-        }
-    }
+                    if (beast.isDeployed()) {
+                        const slot_str = switch (beast.slot_idx.?) {
+                            0 => "[RA TRAN: Tien Phong]",
+                            1 => "[RA TRAN: Trung Quan]",
+                            2 => "[RA TRAN: Hau Ve]",
+                            else => "[RA TRAN: Du Bi]",
+                        };
+                        xml_ui.ui_state.addText("", slot_str, 505, row_y + 4, xml_ui.parseColor("#ffd740"), 14);
 
-    // 2. Center Window: 5 Party Beasts
-    if (mui_ctx.beginWindow("5 Linh Thu Khe Uoc", mui.Rect.init(10, 78, 940, 480), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
+                        var act_buf: [24]u8 = undefined;
+                        const act_str = std.fmt.bufPrint(&act_buf, "recall_slot_{}", .{beast.slot_idx.?}) catch "recall";
+                        xml_ui.ui_state.addButtonEx("", "[Thu Hoi]", act_str, .{ .x = 675, .y = row_y, .w = 82, .h = 24 },
+                            xml_ui.parseColor("#18362b"), xml_ui.parseColor("#0e221b"),
+                            xml_ui.parseColor("#306852"), xml_ui.parseColor("#1c4836"),
+                            xml_ui.parseColor("#c3a041"), xml_ui.parseColor("#ebf8f2"), 4.0, false);
+                    } else {
+                        xml_ui.ui_state.addText("", "[Trong Uyen / Kho]", 505, row_y + 4, xml_ui.parseColor("#708078"), 14);
 
-        const slot_titles = [_][]const u8{
-            "[TIEN PHONG]",
-            "[TRUNG QUAN]",
-            "[HAU VE]",
-            "[DU BI 1]",
-            "[DU BI 2]",
-        };
-
-        const col_widths = [_]i32{ 174, 174, 174, 174, 174 };
-        mui_ctx.layoutRow(&col_widths, 430);
-
-        for (0..5) |i| {
-            mui_ctx.layoutBeginColumn();
-
-            mui_ctx.layoutRow(&[_]i32{-1}, 20);
-            mui_ctx.textLabel(slot_titles[i]);
-
-            if (state.party_entities[i]) |p_ent| {
-                if (state.registry.get(p_ent, Beast)) |b| {
-                    mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                    mui_ctx.textLabel(b.getName());
-        // Draw beast icon
-        renderer.drawIcon(beastIconId(b.*), renderer.charToNdcX(5.0), renderer.charToNdcY(20.0), 0.07);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var eb: [40]u8 = undefined;
-                    const es = std.fmt.bufPrint(&eb, "He: {s}", .{ b.element.asciiName() }) catch "HE";
-                    mui_ctx.textLabel(es);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var rb: [40]u8 = undefined;
-                    const rs = std.fmt.bufPrint(&rb, "Pham: {s}", .{ b.rarity.asciiName() }) catch "PHAM";
-                    mui_ctx.textLabel(rs);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    drawMicrouiHpBar(&mui_ctx, b.hp, b.max_hp, false);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var ab: [40]u8 = undefined;
-                    const as = std.fmt.bufPrint(&ab, "Cong:  {}", .{ b.atk }) catch "CONG";
-                    mui_ctx.textLabel(as);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var db: [40]u8 = undefined;
-                    const ds = std.fmt.bufPrint(&db, "Phong: {}", .{ b.def }) catch "PHONG";
-                    mui_ctx.textLabel(ds);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    var sb: [40]u8 = undefined;
-                    const ss = std.fmt.bufPrint(&sb, "Than:  {}", .{ b.speed }) catch "THAN";
-                    mui_ctx.textLabel(ss);
-
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    // Remove beast from party
-                    if (mui_ctx.button("Gỡ").submit) {
-                        state.party_entities[i] = null;
+                        var act_buf: [24]u8 = undefined;
+                        const act_str = std.fmt.bufPrint(&act_buf, "deploy_beast_{}", .{ent.id}) catch "deploy";
+                        xml_ui.ui_state.addButtonEx("", "[Ra Tran]", act_str, .{ .x = 675, .y = row_y, .w = 82, .h = 24 },
+                            xml_ui.parseColor("#18362b"), xml_ui.parseColor("#0e221b"),
+                            xml_ui.parseColor("#306852"), xml_ui.parseColor("#1c4836"),
+                            xml_ui.parseColor("#c3a041"), xml_ui.parseColor("#ffd740"), 4.0, false);
                     }
-                    mui_ctx.layoutRow(&[_]i32{-1}, 18);
-                    if (mui_ctx.button("Ra Trận").submit) {
-                        triggerNextFloor();
-                    }
-                    var mb: [40]u8 = undefined;
-                    const ms = std.fmt.bufPrint(&mb, "Mana:  {}", .{ b.mana }) catch "MANA";
-                    mui_ctx.textLabel(ms);
 
-                    mui_ctx.layoutRow(&[_]i32{-1}, 12);
-                    mui_ctx.textLabel("");
+                    var feed_act: [24]u8 = undefined;
+                    const feed_act_str = std.fmt.bufPrint(&feed_act, "feed_beast_{}", .{ent.id}) catch "feed";
+                    xml_ui.ui_state.addButtonEx("", "[Boi Duong]", feed_act_str, .{ .x = 762, .y = row_y, .w = 88, .h = 24 },
+                        xml_ui.parseColor("#204632"), xml_ui.parseColor("#10261a"),
+                        xml_ui.parseColor("#3c8258"), xml_ui.parseColor("#205034"),
+                        xml_ui.parseColor("#c3a041"), xml_ui.parseColor("#ffd740"), 4.0, false);
 
-                    var feed_id_buf: [16]u8 = undefined;
-                    const feed_id = std.fmt.bufPrint(&feed_id_buf, "feed_{}", .{ i }) catch "feed";
-                    mui_ctx.pushId(feed_id);
-                    mui_ctx.layoutRow(&[_]i32{-1}, 32);
-                    if (mui_ctx.button("[F] Cho An Thao").submit) {
-                        triggerFeedBeast(i);
-                    }
-                    mui_ctx.popId();
+                    var rel_act: [24]u8 = undefined;
+                    const rel_act_str = std.fmt.bufPrint(&rel_act, "release_beast_{}", .{ent.id}) catch "release";
+                    xml_ui.ui_state.addButtonEx("", "[Tha Pet]", rel_act_str, .{ .x = 855, .y = row_y, .w = 85, .h = 24 },
+                        xml_ui.parseColor("#341818"), xml_ui.parseColor("#1e0c0c"),
+                        xml_ui.parseColor("#542424"), xml_ui.parseColor("#301414"),
+                        xml_ui.parseColor("#a04040"), xml_ui.parseColor("#f08080"), 4.0, false);
+
+                    row_y += 28.0;
                 }
-            } else {
-                mui_ctx.layoutRow(&[_]i32{-1}, 24);
-                mui_ctx.textLabel("(O TRONG)");
-                mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                mui_ctx.textLabel("Chua co linh thu");
-                mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                mui_ctx.textLabel("Hay vao Bi Canh");
-                mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                mui_ctx.textLabel("dung Ngu Thu Lenh [T]");
-                mui_ctx.layoutRow(&[_]i32{-1}, 20);
-                mui_ctx.textLabel("de thu phuc!");
             }
+        },
 
-            mui_ctx.layoutEndColumn();
-        }
+        .dungeon_map => {
+            xml_ui.parseXmlUI(dungeon_xml_bytes, &xml_ui.ui_state, dataResolver);
+
+            const tile_w: f32 = 42.0;
+            const tile_h: f32 = 46.0;
+            const grid_start_x: f32 = 252.0;
+            const grid_start_y: f32 = 141.0;
+
+            var r_idx: usize = GRID_ROWS;
+            while (r_idx > 0) {
+                r_idx -= 1;
+                const r = r_idx;
+                for (0..GRID_COLS) |c| {
+                    const tile = state.dungeon_world.tiles[r][c];
+                    const is_player = (@as(i32, @intCast(c)) == state.dungeon_world.player_col and @as(i32, @intCast(r)) == state.dungeon_world.player_row);
+
+                    const label = if (is_player)
+                        "[TA]"
+                    else if (!tile.revealed)
+                        "?"
+                    else if (tile.cleared)
+                        "."
+                    else switch (tile.kind) {
+                        .empty => ".",
+                        .herb => "THAO",
+                        .wild_beast => "YEU",
+                        .event => "BAO",
+                        .boss => "BOSS",
+                    };
+
+                    var act_buf: [20]u8 = undefined;
+                    const act_str = std.fmt.bufPrint(&act_buf, "tile_{}_{}", .{ r, c }) catch "tile";
+
+                    const tx = grid_start_x + @as(f32, @floatFromInt(c)) * 46.0;
+                    const ty = grid_start_y + @as(f32, @floatFromInt(GRID_ROWS - 1 - r)) * 52.0;
+
+                    const btn_bg = if (is_player)
+                        xml_ui.parseColor("#265546")
+                    else if (!tile.revealed)
+                        xml_ui.parseColor("#0d1a18")
+                    else switch (tile.kind) {
+                        .empty => xml_ui.parseColor("#081210"),
+                        .herb => xml_ui.parseColor("#143820"),
+                        .wild_beast => xml_ui.parseColor("#381414"),
+                        .event => xml_ui.parseColor("#382c14"),
+                        .boss => xml_ui.parseColor("#501010"),
+                    };
+
+                    xml_ui.ui_state.addButtonEx(
+                        "",
+                        label,
+                        act_str,
+                        .{ .x = tx, .y = ty, .w = tile_w, .h = tile_h },
+                        btn_bg,
+                        null,
+                        xml_ui.parseColor("#3a705e"),
+                        null,
+                        if (is_player) xml_ui.parseColor("#ffe57f") else xml_ui.parseColor("#c3a041"),
+                        if (is_player) xml_ui.parseColor("#ffffff") else xml_ui.parseColor("#ebf8f2"),
+                        6.0,
+                        is_player,
+                    );
+                }
+            }
+        },
+
+        .battle => {
+            xml_ui.parseXmlUI(battle_xml_bytes, &xml_ui.ui_state, dataResolver);
+        },
     }
 
-    // 3. Bottom Window: Guidance & Action Buttons
-    if (mui_ctx.beginWindow("Huong Dan Boi Duong", mui.Rect.init(10, 566, 940, 184), .{
-        .noresize = true,
-        .noclose = true,
-    }).active) {
-        defer mui_ctx.endWindow();
+    // 1. Render Drop Shadows mềm
+    xml_ui.ui_state.renderShadows(drawModernRect);
 
-        mui_ctx.layoutRow(&[_]i32{ 280, 280, -1 }, 32);
-        if (mui_ctx.button("[C] Tro Ve Bi Canh").submit) {
-            state.mode = .dungeon_map;
-        }
-        if (mui_ctx.button("[P] Luyen Truc Co Dan").submit) {
-            triggerPillCraft();
-        }
-        if (mui_ctx.button("[B] Dot Pha Canh Gioi").submit) {
-            triggerBreakthrough();
-        }
+    // 2. Render quads bo góc SDF (nền gradient, viền, thanh máu, nút bấm)
+    xml_ui.ui_state.renderQuads(drawModernRect);
 
-        mui_ctx.layoutRow(&[_]i32{-1}, 20);
-        mui_ctx.textLabel("BOI DUONG: Tieu hao 1 Linh Thao de hoi 50 HP va tang vinh vien 2 diem Cong Kich cho Chien Thu.");
+    // 3. Render Avatars/Images chân dung Linh Thú & Tu Sĩ
+    xml_ui.ui_state.renderImages(drawModernRect, drawUiTexture);
 
-        mui_ctx.layoutRow(&[_]i32{-1}, 20);
-        mui_ctx.textLabel("LUYEN DAN & DOT PHA: 3 Linh Thao -> 1 Truc Co Dan. Khi du Exp can dan de vuot Dai Canh Gioi.");
-    }
+    // 4. Render texts
+    renderer.beginTextUi();
+    xml_ui.ui_state.renderTexts(renderer.drawTextClean);
+    renderFloatingTexts();
+    renderer.endTextUi();
 }
 
 fn renderFloatingTexts() void {
-    if (mui_ctx.beginWindow("!popups", mui.Rect.init(0, 0, 960, 760), .{
-        .notitle = true,
-        .noframe = true,
-        .noresize = true,
-        .noscroll = true,
-        .nointeract = true,
-    }).active) {
-        defer mui_ctx.endWindow();
-        for (&state.floating_texts) |*ft| {
-            if (ft.active) {
-                const sx = @as(i32, @intFromFloat((ft.x + 1.0) * 0.5 * 960.0));
-                const sy = @as(i32, @intFromFloat((1.0 - ft.y) * 0.5 * 760.0));
-                const len = std.mem.indexOfScalar(u8, &ft.text, 0) orelse ft.text.len;
-                mui_ctx.drawText(0, ft.text[0..len], .{ .x = sx, .y = sy }, .{ .r = ft.r, .g = ft.g, .b = ft.b, .a = 255 });
-            }
+    for (&state.floating_texts) |*ft| {
+        if (ft.active) {
+            const col = renderer.ndcToCharCol(ft.x);
+            const row = renderer.ndcToCharRow(ft.y);
+            const len = std.mem.indexOfScalar(u8, &ft.text, 0) orelse ft.text.len;
+            renderer.drawTextClean(col, row, ft.text[0..len], ft.r, ft.g, ft.b);
         }
     }
 }
@@ -1374,27 +1585,16 @@ export fn frame() void {
     };
     renderer.drawTexturedQuad(bg_tex, 0.0, 0.0, 1.0, 1.0, .{ 0.38, 0.42, 0.46, 0.88 });
 
-    // 2. Xây dựng giao diện MicroUI
-    mui_ctx.begin();
-    switch (state.mode) {
-        .dungeon_map => buildMicrouiDungeon(),
-        .battle => buildMicrouiBattle(),
-        .party_collection => buildMicrouiParty(),
-    }
-    renderFloatingTexts();
-    mui_ctx.end();
-
-    // 3. Kết xuất toàn bộ giao diện MicroUI bằng Sokol GL
-    mui_renderer.renderCommands(sapp.width(), sapp.height());
+    // 2. Xây dựng và Render giao diện XML UI
+    buildAndRenderXmlUI();
 
     gl.present();
 }
 
 export fn cleanup() void {
     audio.cleanup();
-    mui_renderer.deinit();
-    sgl.destroyContext(sgl_ctx);
-    sgl.shutdown();
+    db.saveAll(&state.registry, &state.party_entities, state.master_entity, &state.dungeon_world) catch {};
+    db.closeDb();
     state.registry.deinit();
 }
 
@@ -1406,7 +1606,9 @@ pub fn main() void {
         .event_cb = input,
         .width = 960,
         .height = 760,
-        .window_title = "Ngự Thú Tiên Đồ (Beast Ascendant) — MicroUI & Procedural Audio",
+        .fullscreen = true,
+        .window_title = "Ngự Thú Tiên Đồ (Beast Ascendant) — XML Mockup UI & Procedural Audio",
         .logger = .{ .func = slog.func },
     });
 }
+

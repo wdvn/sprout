@@ -200,13 +200,14 @@ pub fn drawIcon(tex_id: TextureId, x: f32, y: f32, size: f32) void {
 }
 
 
-/// Bắt đầu vẽ Text UI trên màn hình với canvas chuẩn 480x380
-pub const UI_CANVAS_W: f32 = 480.0;
-pub const UI_CANVAS_H: f32 = 380.0;
+/// Bắt đầu vẽ Text UI trên màn hình với canvas chuẩn 960x760
+pub const UI_CANVAS_W: f32 = 960.0;
+pub const UI_CANVAS_H: f32 = 760.0;
 pub const CHAR_W: f32 = 8.0;
 pub const CHAR_H: f32 = 8.0;
-pub const UI_COLS: f32 = UI_CANVAS_W / CHAR_W; // 60.0 columns
-pub const UI_ROWS: f32 = UI_CANVAS_H / CHAR_H; // 47.5 rows
+pub const UI_COLS: f32 = UI_CANVAS_W / CHAR_W; // 120.0 columns
+pub const UI_ROWS: f32 = UI_CANVAS_H / CHAR_H; // 95.0 rows
+
 
 /// Chuyển đổi tọa độ cột ký tự (0..UI_COLS) sang tọa độ WebGL NDC [-1.0, 1.0]
 pub fn charToNdcX(col: f32) f32 {

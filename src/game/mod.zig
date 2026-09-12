@@ -5,6 +5,8 @@ pub const battle = @import("battle.zig");
 pub const dungeon = @import("dungeon.zig");
 pub const renderer = @import("renderer.zig");
 pub const audio = @import("audio.zig");
+pub const db = @import("db.zig");
+pub const xml_ui = @import("xml_ui.zig");
 
 pub const Element = types.Element;
 pub const Rarity = types.Rarity;
@@ -31,4 +33,7 @@ test {
     _ = beasts;
     _ = battle;
     _ = dungeon;
+    _ = db;
+    _ = xml_ui;
 }
+
