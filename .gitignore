@@ -6,3 +6,4 @@ main
 assets
 src/game/assets/
 zig-pkg
+sprout.*
