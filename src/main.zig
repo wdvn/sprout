@@ -86,6 +86,11 @@ pub const FloatingText = struct {
     active: bool = false,
 };
 
+pub const TileCoord = struct {
+    col: i32,
+    row: i32,
+};
+
 pub const GameState = struct {
     registry: ecs.Registry = undefined,
     master_entity: ecs.Entity = .{ .id = 0, .generation = 0 },
@@ -95,6 +100,7 @@ pub const GameState = struct {
     dungeon_world: Dungeon = undefined,
     arena_state: arena.ArenaState = arena.ArenaState.init(),
     arena_target_idx: ?u8 = null,
+    arena_hovered_tile: ?TileCoord = null,
     mode: GameMode = .dungeon_map,
 
     prng: std.Random.DefaultPrng = undefined,
@@ -146,6 +152,12 @@ pub const GameState = struct {
 
 var state = GameState{};
 
+// Math 3D Library
+const math3d = libs.math3d;
+const Mat4 = math3d.Mat4;
+const Vec3 = math3d.Vec3;
+const Vec4 = math3d.Vec4;
+
 // WebGL Quad Resources
 var quad_prog: gl.Program = .{};
 var quad_vbo: gl.Buffer = .{};
@@ -156,6 +168,132 @@ var u_color2_loc: gl.UniformLocation = .{};
 var u_border_color_loc: gl.UniformLocation = .{};
 var u_params_loc: gl.UniformLocation = .{};
 var u_extra_loc: gl.UniformLocation = .{};
+
+// WebGL 3D Tile Resources
+var tile3d_prog: gl.Program = .{};
+var box3d_vbo: gl.Buffer = .{};
+var box3d_pos_loc: gl.AttribLocation = -1;
+var box3d_norm_loc: gl.AttribLocation = -1;
+var u_tile3d_mvp_loc: gl.UniformLocation = .{};
+var u_tile3d_color_loc: gl.UniformLocation = .{};
+var u_tile3d_color2_loc: gl.UniformLocation = .{};
+var u_tile3d_border_loc: gl.UniformLocation = .{};
+var u_tile3d_params_loc: gl.UniformLocation = .{};
+
+const tile3d_vs_source =
+    \\#version 330
+    \\in vec3 position;
+    \\in vec3 normal;
+    \\uniform mat4 u_mvp;
+    \\uniform vec4 u_color;
+    \\uniform vec4 u_color2;
+    \\uniform vec4 u_border;
+    \\uniform vec4 u_params;
+    \\out vec3 v_pos;
+    \\out vec3 v_normal;
+    \\void main() {
+    \\    v_pos = position;
+    \\    v_normal = normal;
+    \\    gl_Position = u_mvp * vec4(position, 1.0);
+    \\}
+;
+
+const tile3d_fs_source =
+    \\#version 330
+    \\in vec3 v_pos;
+    \\in vec3 v_normal;
+    \\uniform mat4 u_mvp;
+    \\uniform vec4 u_color;
+    \\uniform vec4 u_color2;
+    \\uniform vec4 u_border;
+    \\uniform vec4 u_params;
+    \\out vec4 frag_color;
+    \\void main() {
+    \\    float glow = u_params.x;
+    \\    float time = u_params.y;
+    \\
+    \\    // 1. Mặt trên khối đá Y = 0
+    \\    if (v_normal.y > 0.8) {
+    \\        float t = clamp(v_pos.z + 0.5, 0.0, 1.0);
+    \\        vec4 fill = mix(u_color, u_color2, t);
+    \\
+    \\        float bx = abs(v_pos.x);
+    \\        float bz = abs(v_pos.z);
+    \\        if (bx > 0.44 || bz > 0.44) {
+    \\            fill = u_border;
+    \\        } else if (bx > 0.36 && bz > 0.36) {
+    \\            fill.rgb += vec3(0.08, 0.12, 0.10);
+    \\        }
+    \\
+    \\        if (glow > 0.0) {
+    \\            float pulse = 0.5 + 0.5 * sin(time * 5.0);
+    \\            fill.rgb += u_border.rgb * 0.35 * pulse;
+    \\        }
+    \\        frag_color = fill;
+    \\        return;
+    \\    }
+    \\
+    \\    // 2. Vát sườn đá 3D (3D Extruded Stone Slab Facets)
+    \\    vec4 side_fill = u_color2;
+    \\    if (v_normal.z > 0.8) {
+    \\        side_fill.rgb *= vec3(0.70, 0.74, 0.76);
+    \\    } else if (v_normal.x < -0.8) {
+    \\        side_fill.rgb *= vec3(0.56, 0.60, 0.62);
+    \\    } else if (v_normal.x > 0.8) {
+    \\        side_fill.rgb *= vec3(0.42, 0.45, 0.47);
+    \\    } else {
+    \\        side_fill.rgb *= vec3(0.35, 0.38, 0.40);
+    \\    }
+    \\
+    \\    if (v_pos.y < -0.28) {
+    \\        side_fill = mix(side_fill, u_border * 0.7, 0.6);
+    \\    }
+    \\
+    \\    frag_color = side_fill;
+    \\}
+;
+
+const unit_box_vertices = [_]f32{
+    // 1. Top face (Y = 0.0, normal = 0, 1, 0)
+    -0.5, 0.0, -0.5,  0.0, 1.0, 0.0,
+     0.5, 0.0, -0.5,  0.0, 1.0, 0.0,
+     0.5, 0.0,  0.5,  0.0, 1.0, 0.0,
+    -0.5, 0.0, -0.5,  0.0, 1.0, 0.0,
+     0.5, 0.0,  0.5,  0.0, 1.0, 0.0,
+    -0.5, 0.0,  0.5,  0.0, 1.0, 0.0,
+
+    // 2. Front face (Z = 0.5, normal = 0, 0, 1)
+    -0.5, -0.35, 0.5,  0.0, 0.0, 1.0,
+     0.5, -0.35, 0.5,  0.0, 0.0, 1.0,
+     0.5,  0.0,  0.5,  0.0, 0.0, 1.0,
+    -0.5, -0.35, 0.5,  0.0, 0.0, 1.0,
+     0.5,  0.0,  0.5,  0.0, 0.0, 1.0,
+    -0.5,  0.0,  0.5,  0.0, 0.0, 1.0,
+
+    // 3. Left face (X = -0.5, normal = -1, 0, 0)
+    -0.5, -0.35, -0.5, -1.0, 0.0, 0.0,
+    -0.5, -0.35,  0.5, -1.0, 0.0, 0.0,
+    -0.5,  0.0,   0.5, -1.0, 0.0, 0.0,
+    -0.5, -0.35, -0.5, -1.0, 0.0, 0.0,
+    -0.5,  0.0,   0.5, -1.0, 0.0, 0.0,
+    -0.5,  0.0,  -0.5, -1.0, 0.0, 0.0,
+
+    // 4. Right face (X = 0.5, normal = 1, 0, 0)
+     0.5, -0.35,  0.5,  1.0, 0.0, 0.0,
+     0.5, -0.35, -0.5,  1.0, 0.0, 0.0,
+     0.5,  0.0,  -0.5,  1.0, 0.0, 0.0,
+     0.5, -0.35,  0.5,  1.0, 0.0, 0.0,
+     0.5,  0.0,  -0.5,  1.0, 0.0, 0.0,
+     0.5,  0.0,   0.5,  1.0, 0.0, 0.0,
+
+    // 5. Back face (Z = -0.5, normal = 0, 0, -1)
+     0.5, -0.35, -0.5,  0.0, 0.0, -1.0,
+    -0.5, -0.35, -0.5,  0.0, 0.0, -1.0,
+    -0.5,  0.0,  -0.5,  0.0, 0.0, -1.0,
+     0.5, -0.35, -0.5,  0.0, 0.0, -1.0,
+    -0.5,  0.0,  -0.5,  0.0, 0.0, -1.0,
+     0.5,  0.0,  -0.5,  0.0, 0.0, -1.0,
+};
 
 const quad_vs_source =
     \\#version 330
@@ -197,17 +335,45 @@ const quad_fs_source =
     \\    float is_shadow = u_extra.x;
     \\    float glow = u_extra.y;
     \\    float time = u_extra.z;
+    \\    float shape_mode = u_extra.w;
     \\
     \\    vec2 p = v_uv * half_size;
     \\
-    \\    // 1. Chế độ đổ bóng mờ đa tầng (Tailwind Soft Drop Shadow)
+    \\    // =====================================================================
+    \\    // Mode 2: Bóng Đổ Tiếp Xúc Dưới Chân (2.5D Elliptical Contact Shadow)
+    \\    // =====================================================================
+    \\    if (shape_mode > 1.5 && shape_mode < 2.5) {
+    \\        vec2 norm_p = p / half_size;
+    \\        float r = length(norm_p);
+    \\        float a = (1.0 - smoothstep(0.1, 1.0, r)) * 0.58 * u_color.a;
+    \\        if (a <= 0.002) discard;
+    \\        frag_color = vec4(0.0, 0.0, 0.0, a);
+    \\        return;
+    \\    }
+    \\
+    \\    // =====================================================================
+    \\    // Mode 3: Vòng Hào Quang Khí Quang Trận Pháp (2.5D Daoist Qi Aura Ring)
+    \\    // =====================================================================
+    \\    if (shape_mode > 2.5 && shape_mode < 3.5) {
+    \\        vec2 norm_p = p / half_size;
+    \\        float r = length(norm_p);
+    \\        float ring = 1.0 - smoothstep(0.0, 0.22, abs(r - 0.85));
+    \\        float inner_glow = 1.0 - smoothstep(0.0, 0.9, r);
+    \\        float pulse = 0.7 + 0.3 * sin(time * 4.5);
+    \\        float a = (ring * 0.85 + inner_glow * 0.25) * pulse * u_color.a;
+    \\        if (a <= 0.002) discard;
+    \\        frag_color = vec4(u_color.rgb, a);
+    \\        return;
+    \\    }
+    \\
+    \\    // =====================================================================
+    \\    // Mode 0: Mặc Định - Box Bo Góc SDF / Drop Shadow UI (Nguyên bản)
+    \\    // =====================================================================
     \\    if (is_shadow > 0.5) {
-    \\        // Key shadow (lệch trục Y tạo chiều sâu nổi khối)
     \\        vec2 p1 = p - vec2(0.0, 8.0);
     \\        float dist1 = sdRoundBox(p1, half_size - vec2(2.0), radius + 2.0);
     \\        float a1 = smoothstep(18.0, -2.0, dist1) * 0.45;
     \\
-    \\        // Ambient shadow (đổ bóng sát chân viền tạo độ tương phản cao)
     \\        vec2 p2 = p - vec2(0.0, 2.0);
     \\        float dist2 = sdRoundBox(p2, half_size, radius);
     \\        float a2 = smoothstep(6.0, -1.0, dist2) * 0.35;
@@ -218,26 +384,21 @@ const quad_fs_source =
     \\        return;
     \\    }
     \\
-    \\    // 2. Chế độ vẽ Box bo góc (SDF Round Box)
     \\    float r = min(radius, min(half_size.x, half_size.y) - 1.0);
     \\    if (r < 0.0) r = 0.0;
     \\    float dist = sdRoundBox(p, half_size, r);
     \\
-    \\    // Khử răng cưa viền ngoài (Anti-aliasing)
     \\    float edge_alpha = 1.0 - smoothstep(0.0, 1.2, dist);
     \\    if (edge_alpha <= 0.001) discard;
     \\
-    \\    // Dải màu gradient từ đỉnh xuống đáy
     \\    float t = clamp((v_uv.y + 1.0) * 0.5, 0.0, 1.0);
     \\    vec4 fill = mix(u_color2, u_color, t);
     \\
-    \\    // Hiệu ứng kính mờ (Specular Sheen) ở mép trên
     \\    if (t > 0.82 && dist < -border_w) {
     \\        float sheen = smoothstep(0.82, 1.0, t) * 0.12;
     \\        fill.rgb += vec3(sheen);
     \\    }
     \\
-    \\    // Viền khung sắc nét sub-pixel
     \\    float border_dist = abs(dist + border_w * 0.5) - border_w * 0.5;
     \\    float border_factor = 1.0 - smoothstep(0.0, 1.2, border_dist);
     \\
@@ -314,6 +475,199 @@ fn drawUiTexture(src_name: []const u8, x: f32, y: f32, hw: f32, hh: f32) void {
     if (tex_id) |id| {
         renderer.drawTexturedQuad(id, x, y, hw, hh, .{ 1.0, 1.0, 1.0, 1.0 });
     }
+}
+
+// ============================================================================
+// True 3D Tactical Arena Engine & Camera
+// ============================================================================
+
+pub const ARENA_3D_TILE_W: f32 = 1.16;
+pub const ARENA_3D_TILE_D: f32 = 1.08;
+
+pub fn getArenaTileWorldPos(col: i32, row: i32) Vec3 {
+    const c = @as(f32, @floatFromInt(col));
+    const r = @as(f32, @floatFromInt(row));
+    const x = (c - 3.5) * ARENA_3D_TILE_W;
+    const z = (r - 2.0) * ARENA_3D_TILE_D;
+    return Vec3.init(x, 0.0, z);
+}
+
+pub fn getArena3DCamera() struct { view_proj: Mat4, inv_vp: Mat4 } {
+    // 1. Camera đặt nghiêng góc phối cảnh 47 độ
+    const eye = Vec3.init(0.0, 8.2, 7.8);
+    const target = Vec3.init(0.0, -0.3, 0.2);
+    const up = Vec3.init(0.0, 1.0, 0.0);
+    const view = Mat4.lookAt(eye, target, up);
+
+    // 2. Phối cảnh Perspective
+    const fov = std.math.degreesToRadians(44.0);
+    const aspect = 630.0 / 452.0;
+    const base_proj = Mat4.perspective(fov, aspect, 0.5, 50.0);
+
+    // 3. Ánh xạ lọt lòng vào khung win_arena (x=10, y=108, w=630, h=452)
+    const ndc_hw: f32 = 630.0 / 960.0;
+    const ndc_hh: f32 = 452.0 / 760.0;
+    const ndc_cx: f32 = (10.0 / 960.0) * 2.0 - 1.0 + ndc_hw;
+    const ndc_cy: f32 = 1.0 - (108.0 / 760.0) * 2.0 - ndc_hh;
+    const vp_map = Mat4.viewportMapping(ndc_cx, ndc_cy, ndc_hw, ndc_hh);
+
+    const proj_window = Mat4.mul(vp_map, base_proj);
+    const view_proj = Mat4.mul(proj_window, view);
+    const inv_vp = Mat4.inverse(view_proj) orelse Mat4.identity();
+
+    return .{ .view_proj = view_proj, .inv_vp = inv_vp };
+}
+
+pub fn getArenaTileScreenPos(col: i32, row: i32) struct { x: f32, y: f32 } {
+    const cam = getArena3DCamera();
+    const wpos = getArenaTileWorldPos(col, row);
+    const ndc = cam.view_proj.transformPoint(wpos);
+    const px_x = ((ndc.x + 1.0) * 0.5) * 960.0;
+    const px_y = ((1.0 - ndc.y) * 0.5) * 760.0;
+    return .{ .x = px_x, .y = px_y };
+}
+
+pub fn getArenaUnitHeadScreenPos(col: i32, row: i32) struct { x: f32, y: f32, ndc_x: f32, ndc_y: f32 } {
+    const cam = getArena3DCamera();
+    const wpos = getArenaTileWorldPos(col, row);
+    const head_wpos = Vec3.init(wpos.x, 1.70, wpos.z);
+    const ndc = cam.view_proj.transformPoint(head_wpos);
+    const px_x = ((ndc.x + 1.0) * 0.5) * 960.0;
+    const px_y = ((1.0 - ndc.y) * 0.5) * 760.0;
+    return .{ .x = px_x, .y = px_y, .ndc_x = ndc.x, .ndc_y = ndc.y };
+}
+
+pub fn getArenaTileAt3D(mx: f32, my: f32) ?TileCoord {
+    if (mx < 10.0 or mx > 640.0 or my < 108.0 or my > 560.0) return null;
+
+    const ndc_x = (mx / 960.0) * 2.0 - 1.0;
+    const ndc_y = 1.0 - (my / 760.0) * 2.0;
+
+    const cam = getArena3DCamera();
+    const ray = Mat4.unprojectRay(ndc_x, ndc_y, cam.inv_vp);
+
+    const hit = Mat4.intersectPlaneY(ray.origin, ray.dir, 0.0) orelse return null;
+
+    const c_float = (hit.x / ARENA_3D_TILE_W) + 3.5;
+    const r_float = (hit.z / ARENA_3D_TILE_D) + 2.0;
+
+    const col: i32 = @intFromFloat(@floor(c_float + 0.5));
+    const row: i32 = @intFromFloat(@floor(r_float + 0.5));
+
+    if (col >= 0 and col < @as(i32, @intCast(arena.ARENA_COLS)) and
+        row >= 0 and row < @as(i32, @intCast(arena.ARENA_ROWS)))
+    {
+        return .{ .col = col, .row = row };
+    }
+    return null;
+}
+
+pub fn getArenaUnitAt3D(mx: f32, my: f32) ?u8 {
+    if (mx < 10.0 or mx > 640.0 or my < 108.0 or my > 560.0) return null;
+
+    const ndc_x = (mx / 960.0) * 2.0 - 1.0;
+    const ndc_y = 1.0 - (my / 760.0) * 2.0;
+
+    const cam = getArena3DCamera();
+    const ray = Mat4.unprojectRay(ndc_x, ndc_y, cam.inv_vp);
+
+    var r: i32 = @as(i32, @intCast(arena.ARENA_ROWS - 1));
+    while (r >= 0) : (r -= 1) {
+        var c: i32 = 0;
+        while (c < @as(i32, @intCast(arena.ARENA_COLS))) : (c += 1) {
+            if (state.arena_state.getUnitAt(c, r)) |u_id| {
+                const wpos = getArenaTileWorldPos(c, r);
+                if (@abs(ray.dir.z) > 0.0001) {
+                    const t = (wpos.z - ray.origin.z) / ray.dir.z;
+                    if (t > 0.0) {
+                        const hit_x = ray.origin.x + ray.dir.x * t;
+                        const hit_y = ray.origin.y + ray.dir.y * t;
+                        if (hit_x >= wpos.x - 0.65 and hit_x <= wpos.x + 0.65 and
+                            hit_y >= 0.0 and hit_y <= 1.7)
+                        {
+                            return u_id;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return null;
+}
+
+fn draw3DBoxTile(
+    mvp: Mat4,
+    color_top: [4]f32, color_bottom: [4]f32,
+    border: [4]f32, is_glow: bool,
+) void {
+    gl.useProgram(tile3d_prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, box3d_vbo);
+    gl.enableVertexAttribArray(@intCast(box3d_pos_loc));
+    gl.vertexAttribPointer(@intCast(box3d_pos_loc), 3, gl.FLOAT, false, 6 * @sizeOf(f32), 0);
+    gl.enableVertexAttribArray(@intCast(box3d_norm_loc));
+    gl.vertexAttribPointer(@intCast(box3d_norm_loc), 3, gl.FLOAT, false, 6 * @sizeOf(f32), 3 * @sizeOf(f32));
+
+    gl.uniformMatrix4fv(u_tile3d_mvp_loc, false, &mvp.data);
+    gl.uniform4f(u_tile3d_color_loc, color_top[0], color_top[1], color_top[2], color_top[3]);
+    gl.uniform4f(u_tile3d_color2_loc, color_bottom[0], color_bottom[1], color_bottom[2], color_bottom[3]);
+    gl.uniform4f(u_tile3d_border_loc, border[0], border[1], border[2], border[3]);
+
+    const glow_val: f32 = if (is_glow) 1.0 else 0.0;
+    gl.uniform4f(u_tile3d_params_loc, glow_val, state.pulse_timer, 0.0, 0.0);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 30);
+}
+
+fn drawContactShadow(cx_px: f32, cy_px: f32, half_w: f32, half_h: f32, alpha: f32) void {
+    gl.useProgram(quad_prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad_vbo);
+    gl.enableVertexAttribArray(@intCast(quad_pos_loc));
+    gl.vertexAttribPointer(@intCast(quad_pos_loc), 2, gl.FLOAT, false, 0, 0);
+
+    const ndc_hw = half_w / 480.0;
+    const ndc_hh = half_h / 380.0;
+    const ndc_x = (cx_px / 480.0) - 1.0;
+    const ndc_y = 1.0 - (cy_px / 380.0);
+
+    gl.uniform4f(u_rect_loc, ndc_x, ndc_y, ndc_hw, ndc_hh);
+    gl.uniform4f(u_color_loc, 0.0, 0.0, 0.0, alpha);
+    gl.uniform4f(u_color2_loc, 0.0, 0.0, 0.0, alpha);
+    gl.uniform4f(u_border_color_loc, 0.0, 0.0, 0.0, 0.0);
+    gl.uniform4f(u_params_loc, half_w, half_h, 0.0, 0.0);
+    gl.uniform4f(u_extra_loc, 0.0, 0.0, state.pulse_timer, 2.0);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+fn drawAuraRing(cx_px: f32, cy_px: f32, half_w: f32, half_h: f32, color: [4]f32) void {
+    gl.useProgram(quad_prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad_vbo);
+    gl.enableVertexAttribArray(@intCast(quad_pos_loc));
+    gl.vertexAttribPointer(@intCast(quad_pos_loc), 2, gl.FLOAT, false, 0, 0);
+
+    const ndc_hw = half_w / 480.0;
+    const ndc_hh = half_h / 380.0;
+    const ndc_x = (cx_px / 480.0) - 1.0;
+    const ndc_y = 1.0 - (cy_px / 380.0);
+
+    gl.uniform4f(u_rect_loc, ndc_x, ndc_y, ndc_hw, ndc_hh);
+    gl.uniform4f(u_color_loc, color[0], color[1], color[2], color[3]);
+    gl.uniform4f(u_color2_loc, color[0], color[1], color[2], color[3]);
+    gl.uniform4f(u_border_color_loc, 0.0, 0.0, 0.0, 0.0);
+    gl.uniform4f(u_params_loc, half_w, half_h, 0.0, 0.0);
+    gl.uniform4f(u_extra_loc, 0.0, 1.0, state.pulse_timer, 3.0);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+fn drawStandingUnitSprite(tex_id: renderer.TextureId, cx_px: f32, cy_px: f32, size_px: f32, flip_x: bool) void {
+    const ndc_hw = (size_px * 0.5) / 480.0;
+    const ndc_hh = (size_px * 0.5) / 380.0;
+    const ndc_x = (cx_px / 480.0) - 1.0;
+    const ndc_y = 1.0 - (cy_px / 380.0);
+
+    const w_scale = if (flip_x) -ndc_hw else ndc_hw;
+    renderer.drawTexturedQuad(tex_id, ndc_x, ndc_y, w_scale, ndc_hh, .{ 1.0, 1.0, 1.0, 1.0 });
 }
 
 fn getBeastIcon(beast: *const Beast) []const u8 {
@@ -666,10 +1020,9 @@ fn handleArenaTileClick(col: i32, row: i32) void {
                 audio.play(.attack);
                 state.screen_shake = 0.04;
 
-                const tile_px_x = 26.0 + @as(f32, @floatFromInt(col)) * 74.0 + 35.0;
-                const tile_px_y = 146.0 + @as(f32, @floatFromInt(row)) * 76.0 + 20.0;
-                const ndc_x = (tile_px_x / 960.0) * 2.0 - 1.0;
-                const ndc_y = 1.0 - (tile_px_y / 760.0) * 2.0;
+                const head_info = getArenaUnitHeadScreenPos(col, row);
+                const ndc_x = head_info.ndc_x;
+                const ndc_y = head_info.ndc_y;
 
                 const last_hit = state.arena_state.last_hit;
                 if (last_hit.damage > 0) {
@@ -722,10 +1075,9 @@ fn handleArenaEndTurn() void {
 
         const last_hit = state.arena_state.last_hit;
         if (last_hit.damage > 0) {
-            const tile_px_x = 26.0 + @as(f32, @floatFromInt(last_hit.target_col)) * 74.0 + 35.0;
-            const tile_px_y = 146.0 + @as(f32, @floatFromInt(last_hit.target_row)) * 76.0 + 20.0;
-            const ndc_x = (tile_px_x / 960.0) * 2.0 - 1.0;
-            const ndc_y = 1.0 - (tile_px_y / 760.0) * 2.0;
+            const head_info = getArenaUnitHeadScreenPos(last_hit.target_col, last_hit.target_row);
+            const ndc_x = head_info.ndc_x;
+            const ndc_y = head_info.ndc_y;
 
             var dmg_buf: [24]u8 = undefined;
             const dmg_str = std.fmt.bufPrint(&dmg_buf, "-{}", .{last_hit.damage}) catch "-25";
@@ -783,24 +1135,17 @@ fn checkArenaOutcome() void {
 }
 
 fn renderArenaBoard() void {
-    const start_x: f32 = 26.0;
-    const start_y: f32 = 146.0;
-    const tile_w: f32 = 70.0;
-    const tile_h: f32 = 72.0;
-    const spacing_x: f32 = 4.0;
-    const spacing_y: f32 = 4.0;
-
     const act_idx = state.arena_state.active_unit_idx;
     const active_unit = if (act_idx) |idx| state.arena_state.getUnit(idx) else null;
 
+    const cam = getArena3DCamera();
+
+    // 1. Vẽ các khối bệ đá 3D (3D Stone Box Dais) trên sàn thế giới Y = 0
     var r: i32 = 0;
     while (r < @as(i32, @intCast(arena.ARENA_ROWS))) : (r += 1) {
         var c: i32 = 0;
         while (c < @as(i32, @intCast(arena.ARENA_COLS))) : (c += 1) {
-            const tx = start_x + @as(f32, @floatFromInt(c)) * (tile_w + spacing_x);
-            const ty = start_y + @as(f32, @floatFromInt(r)) * (tile_h + spacing_y);
-
-            const is_occupied = state.arena_state.getUnitAt(c, r);
+            const wpos = getArenaTileWorldPos(c, r);
 
             var is_reachable = false;
             var is_in_skill_range = false;
@@ -818,94 +1163,150 @@ fn renderArenaBoard() void {
             }
 
             const is_active_tile = if (active_unit) |au| (au.col == c and au.row == r) else false;
+            const is_hovered = if (state.arena_hovered_tile) |ht| (ht.col == c and ht.row == r) else false;
 
-            const tile_bg = if (is_active_tile)
-                xml_ui.parseColor("#1c4234")
-            else if (is_reachable)
-                xml_ui.parseColor("#164e63")
-            else if (is_in_skill_range)
-                xml_ui.parseColor("#7f1d1d")
-            else
-                xml_ui.parseColor("#091815");
+            var tile_top = xml_ui.parseColor("#0e221c");
+            var tile_bot = xml_ui.parseColor("#071512");
+            var tile_border = xml_ui.parseColor("#1c4436");
+            var is_glowing = false;
 
-            const tile_border = if (is_active_tile)
-                xml_ui.parseColor("#ffd740")
-            else if (is_reachable)
-                xml_ui.parseColor("#38bdf8")
-            else if (is_in_skill_range)
-                xml_ui.parseColor("#ef4444")
-            else
-                xml_ui.parseColor("#1b3f34");
+            if (is_active_tile) {
+                tile_top = xml_ui.parseColor("#1c4e3a");
+                tile_bot = xml_ui.parseColor("#0d2e22");
+                tile_border = xml_ui.parseColor("#ffd740");
+                is_glowing = true;
+            } else if (is_reachable) {
+                tile_top = xml_ui.parseColor("#134658");
+                tile_bot = xml_ui.parseColor("#08242f");
+                tile_border = xml_ui.parseColor("#38bdf8");
+                is_glowing = true;
+            } else if (is_in_skill_range) {
+                tile_top = xml_ui.parseColor("#661818");
+                tile_bot = xml_ui.parseColor("#340c0c");
+                tile_border = xml_ui.parseColor("#ef4444");
+                is_glowing = true;
+            }
 
-            var act_buf: [24]u8 = undefined;
-            const act_str = std.fmt.bufPrint(&act_buf, "arena_tile_{}_{}", .{ c, r }) catch "arena_tile";
+            if (is_hovered) {
+                tile_border = xml_ui.parseColor("#4ade80");
+                tile_top[0] = @min(1.0, tile_top[0] + 0.12);
+                tile_top[1] = @min(1.0, tile_top[1] + 0.14);
+                tile_top[2] = @min(1.0, tile_top[2] + 0.12);
+                is_glowing = true;
+            }
 
-            const tile_label = if (is_reachable)
-                "[BƯỚC]"
-            else if (is_in_skill_range)
-                (if (is_occupied != null) "[KÍCH!]" else "[TẦM]")
-            else
-                "";
+            // Model matrix của khối đá 3D
+            const m_trans = Mat4.translation(wpos.x, 0.0, wpos.z);
+            const m_scale = Mat4.scaling(ARENA_3D_TILE_W * 0.94, 1.0, ARENA_3D_TILE_D * 0.94);
+            const m_tile = Mat4.mul(m_trans, m_scale);
+            const mvp = Mat4.mul(cam.view_proj, m_tile);
 
-            xml_ui.ui_state.addButtonEx(
-                "",
-                tile_label,
-                act_str,
-                .{ .x = tx, .y = ty, .w = tile_w, .h = tile_h },
-                tile_bg,
-                null,
-                tile_bg,
-                null,
-                tile_border,
-                if (is_reachable) xml_ui.parseColor("#38bdf8") else xml_ui.parseColor("#ffd740"),
-                8.0,
-                is_active_tile or is_reachable or is_in_skill_range,
-            );
+            draw3DBoxTile(mvp, tile_top, tile_bot, tile_border, is_glowing);
+        }
+    }
 
+    // 2. Vẽ 3D Billboard Sprites nhân vật theo thứ tự xa tới gần (Row 0 -> Row 4)
+    r = 0;
+    while (r < @as(i32, @intCast(arena.ARENA_ROWS))) : (r += 1) {
+        var c: i32 = 0;
+        while (c < @as(i32, @intCast(arena.ARENA_COLS))) : (c += 1) {
+            const is_occupied = state.arena_state.getUnitAt(c, r);
             if (is_occupied) |u_id| {
                 if (state.arena_state.getUnit(u_id)) |unit| {
-                    const icon_str = switch (unit.icon_id) {
-                        .player => "player",
-                        .turtle => "turtle",
-                        .fox => "fox",
-                        .bird => "bird",
-                        .dragon => "dragon",
-                        else => "player",
+                    const wpos = getArenaTileWorldPos(c, r);
+                    const is_active_tile = if (active_unit) |au| (au.col == c and au.row == r) else false;
+
+                    const breath_bob = @sin(state.pulse_timer * 4.0 + @as(f32, @floatFromInt(u_id)) * 1.5) * 0.05;
+
+                    // 2a. Tính toán kích thước và vị trí chiếu phối cảnh 3D của Billboard
+                    const p_center = cam.view_proj.transformPoint(Vec3.init(wpos.x, 0.75 + breath_bob, wpos.z));
+                    const p_top = cam.view_proj.transformPoint(Vec3.init(wpos.x, 1.50 + breath_bob, wpos.z));
+                    const p_bot = cam.view_proj.transformPoint(Vec3.init(wpos.x, 0.0 + breath_bob, wpos.z));
+                    const p_ground = cam.view_proj.transformPoint(Vec3.init(wpos.x, 0.005, wpos.z));
+
+                    const ndc_hh = @abs(p_top.y - p_bot.y) * 0.5;
+                    const ndc_hw = ndc_hh * (760.0 / 960.0);
+
+                    // 2b. Bóng đổ tiếp xúc 3D sát mặt sàn đá
+                    const shadow_px_x = (p_ground.x + 1.0) * 480.0;
+                    const shadow_px_y = (1.0 - p_ground.y) * 380.0;
+                    drawContactShadow(shadow_px_x, shadow_px_y, ndc_hw * 420.0, ndc_hh * 160.0, 0.60);
+
+                    // 2c. Vòng hào quang nếu là lượt hành động
+                    if (is_active_tile) {
+                        const aura_col = if (unit.is_player_side)
+                            [4]f32{ 1.0, 0.84, 0.25, 0.80 }
+                        else
+                            [4]f32{ 0.97, 0.44, 0.44, 0.80 };
+                        drawAuraRing(shadow_px_x, shadow_px_y, ndc_hw * 460.0, ndc_hh * 180.0, aura_col);
+                    }
+
+                    // 2d. Vẽ 3D Billboard Sprite nhân vật
+                    const sprite_tex: renderer.TextureId = switch (unit.icon_id) {
+                        .player => .player,
+                        .turtle => .turtle,
+                        .fox => .fox,
+                        .bird => .bird,
+                        .dragon => .dragon,
+                        else => .player,
                     };
 
-                    const p_border = if (unit.is_player_side) xml_ui.parseColor("#ffd740") else xml_ui.parseColor("#f87171");
-                    xml_ui.ui_state.addImage(
-                        "",
-                        icon_str,
-                        .{ .x = tx + 14.0, .y = ty + 6.0, .w = 42.0, .h = 42.0 },
-                        6.0,
-                        p_border,
-                        1.5,
-                        xml_ui.parseColor("#061210"),
+                    const flip_x = (unit.facing == .left);
+                    const w_sign: f32 = if (flip_x) -1.0 else 1.0;
+                    renderer.drawTexturedQuad(sprite_tex, p_center.x, p_center.y, ndc_hw * w_sign, ndc_hh, .{ 1.0, 1.0, 1.0, 1.0 });
+
+                    // 2e. Overhead 3D HUD (Thanh máu, hướng nhìn, tên)
+                    const p_head = cam.view_proj.transformPoint(Vec3.init(wpos.x, 1.62 + breath_bob, wpos.z));
+                    const hud_px_x = (p_head.x + 1.0) * 480.0;
+                    const hud_px_y = (1.0 - p_head.y) * 380.0;
+
+                    const hp_w: f32 = @max(34.0, ndc_hw * 600.0);
+                    const hp_h: f32 = 5.0;
+                    const hp_x = hud_px_x - hp_w * 0.5;
+
+                    drawRect(
+                        (hud_px_x / 480.0) - 1.0,
+                        1.0 - ((hud_px_y + hp_h * 0.5) / 380.0),
+                        (hp_w * 0.5) / 480.0,
+                        (hp_h * 0.5) / 380.0,
+                        .{ 0.05, 0.08, 0.07, 0.9 },
+                        .{ 0.15, 0.30, 0.24, 1.0 },
                     );
 
-                    const fill_color = if (unit.is_player_side) xml_ui.parseColor("#32d264") else xml_ui.parseColor("#f87171");
-                    xml_ui.ui_state.addProgressBarEx(
-                        "",
-                        unit.hp,
-                        unit.max_hp,
-                        .{ .x = tx + 5.0, .y = ty + 52.0, .w = tile_w - 10.0, .h = 6.0 },
-                        fill_color,
-                        null,
-                        xml_ui.parseColor("#060e0c"),
-                        xml_ui.parseColor("#1a3830"),
-                        "",
-                        3.0,
-                        false,
-                    );
+                    if (unit.max_hp > 0) {
+                        const hp_ratio = @as(f32, @floatFromInt(unit.hp)) / @as(f32, @floatFromInt(unit.max_hp));
+                        const fill_w = hp_w * std.math.clamp(hp_ratio, 0.0, 1.0);
+                        if (fill_w > 0.0) {
+                            const fill_color = if (unit.is_player_side)
+                                [4]f32{ 0.20, 0.82, 0.39, 1.0 }
+                            else
+                                [4]f32{ 0.95, 0.30, 0.30, 1.0 };
+                            drawRect(
+                                ((hp_x + fill_w * 0.5) / 480.0) - 1.0,
+                                1.0 - ((hud_px_y + hp_h * 0.5) / 380.0),
+                                (fill_w * 0.5) / 480.0,
+                                (hp_h * 0.5) / 380.0,
+                                fill_color,
+                                fill_color,
+                            );
+                        }
+                    }
 
-                    const facing_symbol = switch (unit.facing) {
+                    const facing_str = switch (unit.facing) {
                         .right => ">",
                         .left => "<",
                         .up => "^",
                         .down => "v",
                     };
-                    xml_ui.ui_state.addText("", facing_symbol, tx + 6.0, ty + 12.0, if (unit.is_player_side) xml_ui.parseColor("#ffd740") else xml_ui.parseColor("#f87171"), 12.0);
+                    const facing_color = if (unit.is_player_side)
+                        [4]f32{ 1.0, 0.84, 0.25, 0.95 }
+                    else
+                        [4]f32{ 0.97, 0.44, 0.44, 0.95 };
+                    renderer.drawUtf8Text(facing_str, hud_px_x + hp_w * 0.5 + 3.0, hud_px_y - 2.0, 10.0, facing_color);
+
+                    const unit_name = unit.getName();
+                    const name_w = renderer.measureText(unit_name, 11.0);
+                    renderer.drawUtf8Text(unit_name, hud_px_x - name_w * 0.5, hud_px_y - 12.0, 11.0, .{ 0.92, 0.96, 0.94, 0.95 });
                 }
             }
         }
@@ -1184,9 +1585,24 @@ export fn input(event: ?*const sapp.Event) void {
     const my = ev.mouse_y * scale_y;
 
     if (ev.type == .MOUSE_MOVE) {
+        if (state.mode == .battle) {
+            state.arena_hovered_tile = getArenaTileAt3D(mx, my);
+        }
         xml_ui.ui_state.handleMouseMove(mx, my);
         return;
     } else if (ev.type == .MOUSE_DOWN and ev.mouse_button == .LEFT) {
+        if (state.mode == .battle) {
+            if (getArenaUnitAt3D(mx, my)) |u_id| {
+                if (state.arena_state.getUnit(u_id)) |u| {
+                    handleArenaTileClick(u.col, u.row);
+                    return;
+                }
+            }
+            if (getArenaTileAt3D(mx, my)) |tile| {
+                handleArenaTileClick(tile.col, tile.row);
+                return;
+            }
+        }
         if (xml_ui.ui_state.handleMouseDown(mx, my)) |action| {
             handleUiAction(action);
         }
@@ -1503,6 +1919,32 @@ export fn init() void {
     u_border_color_loc = gl.getUniformLocation(quad_prog, "u_border_color");
     u_params_loc = gl.getUniformLocation(quad_prog, "u_params");
     u_extra_loc = gl.getUniformLocation(quad_prog, "u_extra");
+
+    // Khởi tạo Shader và VBO cho Bệ Đá Lôi Đài 3D
+    const tile3d_vs = gl.createShader(gl.VERTEX_SHADER).?;
+    gl.shaderSource(tile3d_vs, tile3d_vs_source);
+    gl.compileShader(tile3d_vs);
+
+    const tile3d_fs = gl.createShader(gl.FRAGMENT_SHADER).?;
+    gl.shaderSource(tile3d_fs, tile3d_fs_source);
+    gl.compileShader(tile3d_fs);
+
+    tile3d_prog = gl.createProgram().?;
+    gl.attachShader(tile3d_prog, tile3d_vs);
+    gl.attachShader(tile3d_prog, tile3d_fs);
+    gl.linkProgram(tile3d_prog);
+
+    box3d_pos_loc = gl.getAttribLocation(tile3d_prog, "position");
+    box3d_norm_loc = gl.getAttribLocation(tile3d_prog, "normal");
+    u_tile3d_mvp_loc = gl.getUniformLocation(tile3d_prog, "u_mvp");
+    u_tile3d_color_loc = gl.getUniformLocation(tile3d_prog, "u_color");
+    u_tile3d_color2_loc = gl.getUniformLocation(tile3d_prog, "u_color2");
+    u_tile3d_border_loc = gl.getUniformLocation(tile3d_prog, "u_border");
+    u_tile3d_params_loc = gl.getUniformLocation(tile3d_prog, "u_params");
+
+    box3d_vbo = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, box3d_vbo);
+    gl.bufferDataSlice(gl.ARRAY_BUFFER, f32, &unit_box_vertices, gl.STATIC_DRAW);
 
     // Khởi tạo Texture Renderer, DebugText và Audio Synth
     renderer.init();
@@ -2120,7 +2562,6 @@ fn buildAndRenderXmlUI() void {
 
         .battle => {
             xml_ui.parseXmlUI(battle_xml_bytes, &xml_ui.ui_state, dataResolver);
-            renderArenaBoard();
         },
     }
 
@@ -2129,6 +2570,11 @@ fn buildAndRenderXmlUI() void {
 
     // 2. Render quads bo góc SDF (nền gradient, viền, thanh máu, nút bấm)
     xml_ui.ui_state.renderQuads(drawModernRect);
+
+    // 2.5. Render Lôi Đài 3D Phối Cảnh Chiếu Lọt Khung win_arena (nằm trên nền win_arena, dưới các popup & texts)
+    if (state.mode == .battle) {
+        renderArenaBoard();
+    }
 
     // 3. Render Avatars/Images chân dung Linh Thú & Tu Sĩ
     xml_ui.ui_state.renderImages(drawModernRect, drawUiTexture);
